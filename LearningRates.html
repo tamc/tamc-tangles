@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Learning rates</title>
+
+	<!-- Tangle -->
+	<script type="text/javascript" src="Tangle.js"></script>
+
+	<!-- TangleKit (optional) -->
+	<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+	<script type="text/javascript" src="TangleKit/mootools.js"></script>
+	<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+	<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+	<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+  <style>
+    body {
+      padding: 2% 5%;
+      max-width: 700px;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    
+    table th, table td {
+      padding: 0 1em 0 1em;
+    }
+    
+    table td:first {
+      text-align: left;
+    }
+    
+    table td {
+      text-align: right;
+    }
+/*    span[data-var] {
+      color
+    }
+    span[data-var].TKAdjustableNumber  {
+      background-color: #fff;
+    }*/
+  </style>
+	<!-- example -->
+	<script type="text/javascript">
+
+		function setUpTangle () {
+
+			var element = document.getElementById("home");
+
+			var tangle = new Tangle(element, {
+				initialize: function () {
+				  this.capex_M = 5000;
+				  this.quantity_2010 = 1;
+				  this.quantity_2050 = 1000;
+				  this.capex_learning_rate = 0.1;
+				  this.minimum_quantity_for_learning = this.quantity_2010;
+				},
+				update: function () {
+				  if(this.minimum_quantity_for_learning < this.quantity_2010) {
+				    this.minimum_quantity_for_learning = this.quantity_2010;
+				  }
+				  this.annual_growth = (this.quantity_2050 - this.quantity_2010) / (2050 - 2010);
+				  for(year=2010,end_year=2050; year<=end_year; year = year+10) {
+				    quantity = (this.annual_growth * (year - 2010)) + this.quantity_2010;
+				    doublings = Math.max((Math.log(quantity) - Math.log(this.minimum_quantity_for_learning))/Math.log(2),0);
+				    reduction = 1 - Math.pow(1-this.capex_learning_rate,doublings);
+				    cost = this.capex_M * (1-reduction);
+  				  this['quantity_'+year] = quantity;
+  				  this['doublings_'+year] = doublings;
+  				  this['reduction_'+year] = reduction;
+  				  this['cost_'+year] = cost;
+				  }
+				  this.year_reach_minimum_quantity_for_learning = ((this.minimum_quantity_for_learning - this.quantity_2010) / this.annual_growth) + 2010;
+				}
+			});
+		}
+
+	</script>
+</head>
+
+<body onload="setUpTangle();">
+  <h1>What difference do learning rates make to costs?</h1>
+  <div id='home'>
+    <h2>What are the costs today?</h1>
+    
+    <p>Let's assume that our device costs £<spanclass="TKAdjustableNumber" data-var="capex_M" data-min="1" data-max="5000" data-format='%.0f'></span></p>
+    
+    <h2>How much of it will be built?</h2>
+    
+    <p>Let's assume that the number of devices grows linearly:</p>
+    <table>
+      <tr><th>Year</th><th>Number of devices</th></tr>
+      <tr><td>2010</td><td><span class="TKAdjustableNumber" data-var="quantity_2010" data-min="1" data-max="5000" data-format='%.0f'></span></td></tr>
+      <tr><td>2020</td><td><span data-var="quantity_2020" data-min="1" data-max="5000" data-format='%.0f'></span></td></tr>
+      <tr><td>2030</td><td><span data-var="quantity_2030" data-min="1" data-max="5000" data-format='%.0f'></span></td></tr>
+      <tr><td>2040</td><td><span data-var="quantity_2040" data-min="1" data-max="5000" data-format='%.0f'></span></td></tr>
+      <tr><td>2050</td><td><span class="TKAdjustableNumber" data-var="quantity_2050" data-min="1" data-max="5000" data-format='%.0f'></span></td></tr>
+    </table>
+    
+    <h2>What are the learning rates? When do they kick in?</h2>
+    
+    <p>Let's assume a learning rate of <span class="TKAdjustableNumber" data-var="capex_learning_rate" data-min="0" data-max="0.2" data-step='0.01' data-format='percent'></span> cost reduction for each doubling in the number of devices, and that the learning rate starts when <span class="TKAdjustableNumber" data-var="minimum_quantity_for_learning" data-min="1" data-max="5000" data-format='%.0f'></span> devices have been built (this will occur in <span data-var="year_reach_minimum_quantity_for_learning" data-format='%.0f'></span>).</p>
+    
+    <h2>So the cost could be:</h2>
+    
+    <table>
+      <tr><th>Year</th><th>Number of devices</th><th>Number of 'doublings'</th><th>Cost reduction</th><th>Cost</th></tr>
+      <tr><td>2010</td><td><span data-var="quantity_2010" data-format='%.0f'></span></td><td><span data-var="doublings_2010" data-format='%.1f'></span></td><td><span data-var="reduction_2010" data-format='percent'></span></td><td><span data-var="cost_2010" data-format='%.0f'></span></td></tr>
+      <tr><td>2020</td><td><span data-var="quantity_2020" data-format='%.0f'></span></td><td><span data-var="doublings_2020" data-format='%.1f'></span></td><td><span data-var="reduction_2020" data-format='percent'></span></td><td><span data-var="cost_2020" data-format='%.0f'></span></td></tr>
+      <tr><td>2030</td><td><span data-var="quantity_2030" data-format='%.0f'></span></td><td><span data-var="doublings_2030" data-format='%.1f'></span></td><td><span data-var="reduction_2030" data-format='percent'></span></td><td><span data-var="cost_2030" data-format='%.0f'></span></td></tr>
+      <tr><td>2040</td><td><span data-var="quantity_2040" data-format='%.0f'></span></td><td><span data-var="doublings_2040" data-format='%.1f'></span></td><td><span data-var="reduction_2040" data-format='percent'></span></td><td><span data-var="cost_2040" data-format='%.0f'></span></td></tr>
+      <tr><td>2050</td><td><span data-var="quantity_2050" data-format='%.0f'></span></td><td><span data-var="doublings_2050" data-format='%.1f'></span></td><td><span data-var="reduction_2050" data-format='percent'></span></td><td><span data-var="cost_2050" data-format='%.0f'></span></td></tr>
+    </table>
+
+</body>
+</html>
