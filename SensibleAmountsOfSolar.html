@@ -38,31 +38,50 @@
 
 		function setUpTangle () {
 
-			var element = document.getElementById("home");
-
-			var tangle = new Tangle(element, {
+			var home_tangle = new Tangle(document.getElementById("home"), {
 				initialize: function () {
-					this.homes_M = 30;
-					this.homes_with_airconditioning_percent = 5;
+					this.homes_M = 40;
+					this.homes_with_airconditioning_percent = 0.5;
 					this.outside_peak_temperature_C = 30;
 					this.inside_peak_temperature_C = 20;
 					this.home_leakiness_WperC = 250;
 					this.airconditioning_cop = 3.5;
-					this.solar_peak_intensity_WperM2 = 1000;
-					this.solar_efficiency_percent = 10;
-					this.household_south_facing_roof_area_m2 = 10;
 				},
 				update: function () {
 					this.airconditioning_size_kW = (this.outside_peak_temperature_C - this.inside_peak_temperature_C) * this.home_leakiness_WperC / 1000;
 					this.airconditioning_electricity_demand_kW = this.airconditioning_size_kW / this.airconditioning_cop;
-					this.solar_capacity_GW = this.airconditioning_electricity_demand_kW * this.homes_M * (this.homes_with_airconditioning_percent/100);
+					this.residential_solar_capacity_GW = this.airconditioning_electricity_demand_kW * this.homes_M * this.homes_with_airconditioning_percent;
+				}
+			});
+			
+			var commercial_tangle = new Tangle(document.getElementById("commercial"), {
+			  initialize: function () {
+			    this.cooling_demand_annual_TWh = 103.7;
+			    this.airconditioning_cop = 3.5;
+			    this.airconditioning_load_factor = 0.25;
+			  },
+			  update: function() {
+			    this.average_cooling_GW = (this.cooling_demand_annual_TWh / 365.25 * 24);
+			    this.peak_cooling_GW = this.average_cooling_GW  / this.airconditioning_load_factor;
+			    this.commercial_solar_capacity_GW = this.peak_cooling_GW / this.airconditioning_cop;
+			  }
+			});
+			
+			var total_tangle = new Tangle(document.getElementById("total"), {
+			  initialize: function () {
+					this.solar_peak_intensity_WperM2 = 1000;
+					this.solar_efficiency_percent = 10;
+					this.household_south_facing_roof_area_m2 = 10;
+			  },
+			  update: function() {
+			    this.total_solar_capacity_GW = this.commercial_solar_capacity_GW + this.residential_solar_capacity_GW;
           var solar_intensity = this.solar_peak_intensity_WperM2 * (this.solar_efficiency_percent / 100); // W/m2
-					this.solar_area_km2 = ((this.solar_capacity_GW * 1e9) / solar_intensity )/1e6;
+					this.solar_area_km2 = ((this.total_solar_capacity_GW * 1e9) / solar_intensity )/1e6;
 					var uk_land_area_km2 = 243610;
 					this.solar_area_percent_country = this.solar_area_km2 / uk_land_area_km2;
 					this.solar_area_per_household_with_airconditioning_m2 = (this.airconditioning_electricity_demand_kW * 1000) / solar_intensity;
 					this.solar_area_percent_household_roof = this.solar_area_per_household_with_airconditioning_m2 / this.household_south_facing_roof_area_m2;
-				}
+			  }
 			});
 		}
 
@@ -70,47 +89,75 @@
 </head>
 
 <body onload="setUpTangle();">
-  <h1>What is a sensible amount of solar PV for the UK?</h1>
-	<p>Solar PV works when it is sunny. Air conditioning is needed most when it is sunny. It might therefore be sensible to size our solar PV deployment to match air conditioning use.</p>
+  <div id='total'>
+    <h1>What is a sensible amount of solar PV for the UK?</h1>
+  	<p>Solar PV works when it is sunny. Air conditioning is needed most when it is sunny. It might therefore be sensible to size our solar PV deployment to match air conditioning use. That might mean about <span data-var='total_solar_capacity_GW' data-format="%.0f"> GW</span> of solar PV.</p>
   
-  <div id='home'>
-    <h2><span data-var='solar_capacity_GW' data-format="%.0f"> GW</span> for air conditioning in the home</h2>
-    <p>Assuming that:</p>
-    <ul>
-      <li>
-        there will be <span data-var="homes_M" class="TKAdjustableNumber" data-min="26" data-max="40"> million households</span>,
-        <span class='note'>According to <a href='http://www.communities.gov.uk/housing/housingresearch/housingstatistics/housingstatisticsby/householdestimates/livetables-households/'>CLG (2010)</a> there were about 26 million UK households in 2008 and the number is forecast to grow to 30 million in 2023 and 33 million in 2033. The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> projects up to 40 million households by 2050.</span>
-      </li>
-      <li>
-        that <span data-var="homes_with_airconditioning_percent" class="TKAdjustableNumber" data-min="0" data-max="100" data-step="5"> percent</span> will have air-conditioning,
-        <span class='note'><a href='http://www.admin.cam.ac.uk/offices/research/documents/local/events/downloads/ec/Prof_Koen_Steemers.pdf'>Steemers (200?)</a> reports that 2% of houses had air conditioning in 2005. He also reports that in 2001, 76% of homes in the USA had air conditioning. The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> allows up to 100% of houses to be air conditioned.</span>
-      </li>
-      
-      <li>
-        that the hottest outside temperature will be <span data-var="outside_peak_temperature_C" class="TKAdjustableNumber" data-min="25" data-max="45">C</span> and the desired inside temperature will be <span data-var="inside_peak_temperature_C" class="TKAdjustableNumber" data-min="15" data-max="25">C</span>,
-        <span class='note'>The <a href='http://www.metoffice.gov.uk/climate/uk/extremes/'>MET Office (2011)</a> reports the hottest day on record was 38.5C, on 10 August 2003 in Faversham in Kent.</span> 
-      </li>
-      <li>
-        that <span data-var="home_leakiness_WperC" class="TKAdjustableNumber" data-min="100" data-max="250" data-step='25'>W</span> of heat will leak into a typical home per degree of temperature difference between the inside and outside,
-        <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has an average heat loss per house of 247W/C in 2007, and a range of 119 to 186W/C in 2050.</span>
+    <div id='home'>
+      <h2><span data-var='residential_solar_capacity_GW' data-format="%.0f"> GW</span> for air conditioning in the home</h2>
+      <p>Assuming that:</p>
+      <ul>
+        <li>
+          there will be <span data-var="homes_M" class="TKAdjustableNumber" data-min="26" data-max="40"> million households</span>,
+          <span class='note'>According to <a href='http://www.communities.gov.uk/housing/housingresearch/housingstatistics/housingstatisticsby/householdestimates/livetables-households/'>CLG (2010)</a> there were about 26 million UK households in 2008 and the number is forecast to grow to 30 million in 2023 and 33 million in 2033. The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> projects up to 40 million households by 2050.</span>
         </li>
-      <li>
-        and that air conditioning units will have a coefficient of performance of  <span data-var="airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6"></span>.
-        <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has a typical COP for an old air conditioning unit of 2.5 and a best potential for new units of 6.0. The <a href='http://www.energyrating.gov.au/appsearch/air_srch.asp?type=Reverse+Cycle&out=all&inst=all&inst2=all&model=&pgsize=50&brand=All&B1=SEARCH&Elec=&CUses=&HUses=&Years=&runout=&sr=1&list=basic&sort=[New+SRI+Cool]+DESC,[New+SRI+Heat]+DESC#RESULT'>Australian Energy Labelling Scheme</a> lists devices with a seasonal COP of 5.25.</span>
-      </li>
-    </ul>  
-    <p>Then, per household:</p>
-    <ul>
-      <li>
-        A typical air conditioning unit will provide <span data-var="airconditioning_size_kW" data-format="%.2f"> kW</span> of cooling,
-        <span class='note'>Sense check: <a href="http://www.heatbusters.com/cooling/product-types/portable-ac">Shops</a> sell portable air conditioning units with peak outputs of 2.5-3.8 kW.<a href="http://www.mitsubishi-aircon.co.uk/">Mitsubishi's</a> small 'M series' systems range from 2.2 to 7.1 kW</span>
-      </li>
-      <li>which will require <span data-var='airconditioning_electricity_demand_kW' data-format="%.2f"> kW</span> of electricity</li>
-    </ul>
-    <p>And for the country as a whole:</p>
-    <ul>
-      <li>About <span data-var='solar_capacity_GW' data-format="%.2f"> GW</span> of electricity, which could be provided by Solar PV.</li>
-    </ul>
+        <li>
+          that <span data-var="homes_with_airconditioning_percent" class="TKAdjustableNumber" data-min="0" data-max="1" data-step="0.05" data-format='percent'></span> will have air-conditioning,
+          <span class='note'><a href='http://www.admin.cam.ac.uk/offices/research/documents/local/events/downloads/ec/Prof_Koen_Steemers.pdf'>Steemers (200?)</a> reports that 2% of houses had air conditioning in 2005. He also reports that in 2001, 76% of homes in the USA had air conditioning. The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> allows up to 100% of houses to be air conditioned.</span>
+        </li>
+      
+        <li>
+          that the hottest outside temperature will be <span data-var="outside_peak_temperature_C" class="TKAdjustableNumber" data-min="25" data-max="45">&deg;C</span> and the desired inside temperature will be <span data-var="inside_peak_temperature_C" class="TKAdjustableNumber" data-min="15" data-max="25">&deg;C</span>,
+          <span class='note'>The <a href='http://www.metoffice.gov.uk/climate/uk/extremes/'>MET Office (2011)</a> reports the hottest day on record was 38.5C, on 10 August 2003 in Faversham in Kent.</span> 
+        </li>
+        <li>
+          that <span data-var="home_leakiness_WperC" class="TKAdjustableNumber" data-min="100" data-max="250" data-step='25'>W</span> of heat will leak into a typical home per degree of temperature difference between the inside and outside,
+          <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has an average heat loss per house of 247W/C in 2007, and a range of 119 to 186W/C in 2050.</span>
+          </li>
+        <li>
+          and that air conditioning units will have a coefficient of performance of  <span data-var="airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6" data-step="0.5"></span>.
+          <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has a typical COP for an old air conditioning unit of 2.5 and a best potential for new units of 6.0. The <a href='http://www.energyrating.gov.au/appsearch/air_srch.asp?type=Reverse+Cycle&out=all&inst=all&inst2=all&model=&pgsize=50&brand=All&B1=SEARCH&Elec=&CUses=&HUses=&Years=&runout=&sr=1&list=basic&sort=[New+SRI+Cool]+DESC,[New+SRI+Heat]+DESC#RESULT'>Australian Energy Labelling Scheme</a> lists devices with a seasonal COP of 5.25.</span>
+        </li>
+      </ul>  
+      <p>Then, per household:</p>
+      <ul>
+        <li>
+          A typical air conditioning unit will provide <span data-var="airconditioning_size_kW" data-format="%.2f"> kW</span> of cooling,
+          <span class='note'>Sense check: <a href="http://www.heatbusters.com/cooling/product-types/portable-ac">Shops</a> sell portable air conditioning units with peak outputs of 2.5-3.8 kW.<a href="http://www.mitsubishi-aircon.co.uk/">Mitsubishi's</a> small 'M series' systems range from 2.2 to 7.1 kW</span>
+        </li>
+        <li>which will require <span data-var='airconditioning_electricity_demand_kW' data-format="%.2f"> kW</span> of electricity</li>
+      </ul>
+      <p>And for the country as a whole:</p>
+      <ul>
+        <li>About <span data-var='residential_solar_capacity_GW' data-format="%.2f"> GW</span> of electricity, which could be provided by solar PV.</li>
+      </ul>
+    </div>
+  
+    <div id='commercial'>
+      <h2><span data-var='commercial_solar_capacity_GW' data-format="%.0f"> GW</span> for commercial air conditioning</h2>
+      <p>This is currently a bit of a placeholder. Let us assume that:</p>
+      <ul>
+        <li>
+          Commercial demand for cooling averages <span data-var="cooling_demand_annual_TWh" class="TKAdjustableNumber" data-min="0" data-max="110"> TWh/yr</span>
+          <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> assumes that in 2007 27.3 TWh/yr were used for commercial cooling, and that in 2050 the cooling demand could range from 17 TWh/yr to 103 TWh/yr.</span>
+          </li>
+        <li>
+          and that air conditioning units will have a coefficient of performance of <span data-var="airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6" data-step='0.5'></span>
+          <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has a typical COP for an old air conditioning unit of 2.5 and a best potential for new units of 6.0. The <a href='http://www.energyrating.gov.au/appsearch/air_srch.asp?type=Reverse+Cycle&out=all&inst=all&inst2=all&model=&pgsize=50&brand=All&B1=SEARCH&Elec=&CUses=&HUses=&Years=&runout=&sr=1&list=basic&sort=[New+SRI+Cool]+DESC,[New+SRI+Heat]+DESC#RESULT'>Australian Energy Labelling Scheme</a> lists devices with a seasonal COP of 5.25.</span>
+        </li>
+        <li>
+          and that air conditioning units operate at a load factor of <span data-var="airconditioning_load_factor" class="TKAdjustableNumber" data-min="0.1" data-max="1" data-format='percent' data-step='0.01'></span>
+          <span class='note'>No idea. Current figure is a guess.</span>
+        </li>
+      </ul>
+      <p>Then, for the country as a whole:</p>
+      <ul>
+        <li>The peak heat demand will be <span data-var='peak_cooling_GW' data-format="%.2f"> GW</span>
+        <li>The peak electricity demand will be <span data-var='commercial_solar_capacity_GW' data-format="%.2f"> GW</span>, which could be provided by solar PV.
+      </ul>
+    </div>
+    <h2>Implications for the area of solar PV required</h2>
+  
     <p>Assuming that:</p>
     <ul>
       <li>
@@ -130,11 +177,19 @@
       <li>The solar PV will need to cover <span data-var='solar_area_km2' data-format="%.2f"> km<sup>2</sup></span> (about <span data-var='solar_area_percent_country' data-format="percent"><span> of the country)</li>
       <li>Or about <span data-var='solar_area_per_household_with_airconditioning_m2' data-format="%.1f"> m<sup>2</sup></span> per household with air conditioning (about <span data-var='solar_area_percent_household_roof' data-format="percent"></span> of the typical south facing roof, assuming <span data-var="household_south_facing_roof_area_m2" class="TKAdjustableNumber" data-min="10" data-max="30">m<sup>2</sup></span> per household)</li>
     </ul>
+    
     <h2>Caveats, notes and queries</h2>
     <ul>
       <li>How to deal with the fact that heating through windows is sensitive to intensity of sunshine, not temperature difference</li>
+      <li>What is the load factor for commercial air conditioning? Will this change?</li>
     </ul>
+    <h2>What has changed in this analysis?</h2>
+    <ol>
+      <li>12 August 2011&mdash;Added commercial cooling</li>
+      <li>1 August 2011&mdash;First attempt</li>
+    </ol>
+    <h2>Who wrote this?</h2>
+    <div id='author'>Tom Counsell. <a href='http://tom.counsell.org'>http://tom.counsell.org</a>. 12<span style='super'>th</span> August 2011</div>
   </div>
-
 </body>
 </html>
