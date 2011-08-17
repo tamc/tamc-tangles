@@ -92,7 +92,10 @@
   	<p><a href="http://en.wikipedia.org/wiki/Photovoltaics">Solar PV</a> works when it is sunny. 
   	    Air conditioning is needed most when it is sunny. In the absence of cheap and effective energy storage, it might therefore be sensible to size our solar PV deployment to match air conditioning use.
   	    That might mean about <span data-var='total_solar_capacity_GW' data-format="%.0f"> GW</span> of solar PV.
+  	</p>
+  	<p>
   	    The assumptions used to reach that figure are below in blue. You can try out different assumptions by clicking on a blue number and dragging to the left or right.
+  	    There are some <a href='#caveats'>notes and caveats</a> at the bottom of the page.
   	</p>
   
     <div id='home'>
@@ -132,14 +135,14 @@
       <p>Then, per household:</p>
       <ul>
         <li>
-          A typical air conditioning unit will provide <span data-var="home_airconditioning_size_kW" data-format="%.2f"> kWth</span> of cooling,
+          A typical house will use <span data-var="home_airconditioning_size_kW" data-format="%.2f"> kWth</span> of cooling,
           <span class='note'>Sense check: <a href="http://www.heatbusters.com/cooling/product-types/portable-ac">Shops</a> sell portable air conditioning units with peak outputs of 2.5-3.8 kW.<a href="http://www.mitsubishi-aircon.co.uk/">Mitsubishi's</a> small 'M series' systems range from 2.2 to 7.1 kW</span>
         </li>
         <li>which will require <span data-var='home_airconditioning_electricity_demand_kW' data-format="%.2f"> kW</span> of electricity</li>
       </ul>
       <p>And for the country as a whole:</p>
       <ul>
-        <li>About <span data-var='home_total_airconditioning_electricity_demand_GW' data-format="%.2f"> GW</span> of electricity, which could be provided by solar PV.</li>
+        <li>Home air conditioning will require, at most, <span data-var='home_total_airconditioning_electricity_demand_GW' data-format="%.2f"> GW</span> of electricity. This could be provided by solar PV.</li>
       </ul>
     </div>
   
@@ -188,7 +191,7 @@
       <li>Or about <span data-var='solar_area_per_household_with_airconditioning_m2' data-format="%.1f"> m<sup>2</sup></span> per household with air conditioning (about <span data-var='solar_area_percent_household_roof' data-format="percent"></span> of the typical south facing roof, assuming <span data-var="household_south_facing_roof_area_m2" class="TKAdjustableNumber" data-min="10" data-max="30">m<sup>2</sup></span> per household)</li>
     </ul>
     
-    <h2>Caveats, notes and queries</h2>
+    <h2 id='caveats'>Caveats, notes and queries</h2>
     <ul>
       <li>The peak in cooling will occur after the peak in sun. Need to adjust the solar PV capacity to reflect this.</li>
       <li>Will we cool our homes and our businesses at the same time? If not, need to reduce the total.</li>
