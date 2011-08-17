@@ -26,12 +26,12 @@
     span.note a {
       color: #999;
     }
-/*    span[data-var] {
-      color
+    span[data-var] {
+      background-color: #FFFDCC;
     }
     span[data-var].TKAdjustableNumber  {
       background-color: #fff;
-    }*/
+    }
   </style>
 	<!-- example -->
 	<script type="text/javascript">
@@ -45,25 +45,27 @@
 					this.outside_peak_temperature_C = 30;
 					this.inside_peak_temperature_C = 20;
 					this.home_leakiness_WperC = 250;
-					this.airconditioning_cop = 3.5;
+					this.home_heat_created_W = 250;
+					this.home_heat_solar_gain_W = 250;
+					this.home_airconditioning_cop = 3.5;
 				},
 				update: function () {
-					this.airconditioning_size_kW = (this.outside_peak_temperature_C - this.inside_peak_temperature_C) * this.home_leakiness_WperC / 1000;
-					this.airconditioning_electricity_demand_kW = this.airconditioning_size_kW / this.airconditioning_cop;
-					this.residential_solar_capacity_GW = this.airconditioning_electricity_demand_kW * this.homes_M * this.homes_with_airconditioning_percent;
+					this.home_airconditioning_size_kW = ( this.home_heat_created_W + this.home_heat_solar_gain_W + (this.outside_peak_temperature_C - this.inside_peak_temperature_C) * this.home_leakiness_WperC) / 1000;
+					this.home_airconditioning_electricity_demand_kW = this.home_airconditioning_size_kW / this.home_airconditioning_cop;
+					this.home_total_airconditioning_electricity_demand_GW = this.home_airconditioning_electricity_demand_kW * this.homes_M * this.homes_with_airconditioning_percent;
 				}
 			});
 			
 			var commercial_tangle = new Tangle(document.getElementById("commercial"), {
 			  initialize: function () {
-			    this.cooling_demand_annual_TWh = 103.7;
-			    this.airconditioning_cop = 3.5;
-			    this.airconditioning_load_factor = 0.25;
+			    this.commercial_cooling_demand_annual_TWh = 103.7;
+			    this.commercial_airconditioning_cop = 3.5;
+			    this.commercial_airconditioning_load_factor = 0.25;
 			  },
 			  update: function() {
-			    this.average_cooling_GW = (this.cooling_demand_annual_TWh / 365.25 * 24);
-			    this.peak_cooling_GW = this.average_cooling_GW  / this.airconditioning_load_factor;
-			    this.commercial_solar_capacity_GW = this.peak_cooling_GW / this.airconditioning_cop;
+			    this.commercial_average_cooling_GW = (this.commercial_cooling_demand_annual_TWh / 365.25 * 24);
+			    this.commercial_peak_cooling_GW = this.commercial_average_cooling_GW  / this.commercial_airconditioning_load_factor;
+			    this.commercial_total_airconditioning_electricity_demand_GW = this.commercial_peak_cooling_GW / this.commercial_airconditioning_cop;
 			  }
 			});
 			
@@ -94,7 +96,7 @@
   	<p>Solar PV works when it is sunny. Air conditioning is needed most when it is sunny. It might therefore be sensible to size our solar PV deployment to match air conditioning use. That might mean about <span data-var='total_solar_capacity_GW' data-format="%.0f"> GW</span> of solar PV.</p>
   
     <div id='home'>
-      <h2><span data-var='residential_solar_capacity_GW' data-format="%.0f"> GW</span> for air conditioning in the home</h2>
+      <h2><span data-var='home_total_airconditioning_electricity_demand_GW' data-format="%.0f"> GW</span> for air conditioning in the home</h2>
       <p>Assuming that:</p>
       <ul>
         <li>
@@ -111,49 +113,57 @@
           <span class='note'>The <a href='http://www.metoffice.gov.uk/climate/uk/extremes/'>MET Office (2011)</a> reports the hottest day on record was 38.5C, on 10 August 2003 in Faversham in Kent.</span> 
         </li>
         <li>
-          that <span data-var="home_leakiness_WperC" class="TKAdjustableNumber" data-min="100" data-max="250" data-step='25'>W</span> of heat will leak into a typical home per degree of temperature difference between the inside and outside,
-          <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has an average heat loss per house of 247W/C in 2007, and a range of 119 to 186W/C in 2050.</span>
-          </li>
+          that <span data-var="home_leakiness_WperC" class="TKAdjustableNumber" data-min="100" data-max="250" data-step='25'>W</span> of heat will leak through the walls into a typical home per degree of temperature difference between the inside and outside,
+          <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has an average heat loss per house of 247W/C in 2007, and a range of 119 to 186W/C in 2050. Is the default internal temperature too conservative? Check UK building codes</span>
+        </li>
         <li>
-          and that air conditioning units will have a coefficient of performance of  <span data-var="airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6" data-step="0.5"></span>.
+          that <span data-var="home_heat_created_W" class="TKAdjustableNumber" data-min="0" data-max="250" data-step='25'>W</span> of heat will be created by people's bodies and electrical equipment such as fridges,
+          <span class='note'>Made up.</span>
+        </li>
+        <li>        
+          that <span data-var="home_heat_solar_gain_W" class="TKAdjustableNumber" data-min="0" data-max="250" data-step='25'>W</span> of heat will enter through windows,
+          <span class='note'>Made up.</span>
+        </li>
+        <li>
+          and that air conditioning units will have a coefficient of performance of  <span data-var="home_airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6" data-step="0.5"></span>.
           <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has a typical COP for an old air conditioning unit of 2.5 and a best potential for new units of 6.0. The <a href='http://www.energyrating.gov.au/appsearch/air_srch.asp?type=Reverse+Cycle&out=all&inst=all&inst2=all&model=&pgsize=50&brand=All&B1=SEARCH&Elec=&CUses=&HUses=&Years=&runout=&sr=1&list=basic&sort=[New+SRI+Cool]+DESC,[New+SRI+Heat]+DESC#RESULT'>Australian Energy Labelling Scheme</a> lists devices with a seasonal COP of 5.25.</span>
         </li>
       </ul>  
       <p>Then, per household:</p>
       <ul>
         <li>
-          A typical air conditioning unit will provide <span data-var="airconditioning_size_kW" data-format="%.2f"> kW</span> of cooling,
+          A typical air conditioning unit will provide <span data-var="home_airconditioning_size_kW" data-format="%.2f"> kW</span> of cooling,
           <span class='note'>Sense check: <a href="http://www.heatbusters.com/cooling/product-types/portable-ac">Shops</a> sell portable air conditioning units with peak outputs of 2.5-3.8 kW.<a href="http://www.mitsubishi-aircon.co.uk/">Mitsubishi's</a> small 'M series' systems range from 2.2 to 7.1 kW</span>
         </li>
-        <li>which will require <span data-var='airconditioning_electricity_demand_kW' data-format="%.2f"> kW</span> of electricity</li>
+        <li>which will require <span data-var='home_airconditioning_electricity_demand_kW' data-format="%.2f"> kW</span> of electricity</li>
       </ul>
       <p>And for the country as a whole:</p>
       <ul>
-        <li>About <span data-var='residential_solar_capacity_GW' data-format="%.2f"> GW</span> of electricity, which could be provided by solar PV.</li>
+        <li>About <span data-var='home_total_airconditioning_electricity_demand_GW' data-format="%.2f"> GW</span> of electricity, which could be provided by solar PV.</li>
       </ul>
     </div>
   
     <div id='commercial'>
-      <h2><span data-var='commercial_solar_capacity_GW' data-format="%.0f"> GW</span> for commercial air conditioning</h2>
+      <h2><span data-var='commercial_total_airconditioning_electricity_demand_GW' data-format="%.0f"> GW</span> for commercial air conditioning</h2>
       <p>This is currently a bit of a placeholder. Let us assume that:</p>
       <ul>
         <li>
-          Commercial demand for cooling averages <span data-var="cooling_demand_annual_TWh" class="TKAdjustableNumber" data-min="0" data-max="110"> TWh/yr</span>
+          Commercial demand for cooling averages <span data-var="commercial_cooling_demand_annual_TWh" class="TKAdjustableNumber" data-min="0" data-max="110"> TWh/yr</span>
           <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> assumes that in 2007 27.3 TWh/yr were used for commercial cooling, and that in 2050 the cooling demand could range from 17 TWh/yr to 103 TWh/yr.</span>
           </li>
         <li>
-          and that air conditioning units will have a coefficient of performance of <span data-var="airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6" data-step='0.5'></span>
+          and that air conditioning units will have a coefficient of performance of <span data-var="commercial_airconditioning_cop" class="TKAdjustableNumber" data-min="2.5" data-max="6" data-step='0.5'></span>
           <span class='note'>The <a href='http://www.decc.gov.uk/en/content/cms/tackling/2050/2050.aspx'>2050 calculator</a> has a typical COP for an old air conditioning unit of 2.5 and a best potential for new units of 6.0. The <a href='http://www.energyrating.gov.au/appsearch/air_srch.asp?type=Reverse+Cycle&out=all&inst=all&inst2=all&model=&pgsize=50&brand=All&B1=SEARCH&Elec=&CUses=&HUses=&Years=&runout=&sr=1&list=basic&sort=[New+SRI+Cool]+DESC,[New+SRI+Heat]+DESC#RESULT'>Australian Energy Labelling Scheme</a> lists devices with a seasonal COP of 5.25.</span>
         </li>
         <li>
-          and that air conditioning units operate at a load factor of <span data-var="airconditioning_load_factor" class="TKAdjustableNumber" data-min="0.1" data-max="1" data-format='percent' data-step='0.01'></span>
+          and that air conditioning units operate at a load factor of <span data-var="commercial_airconditioning_load_factor" class="TKAdjustableNumber" data-min="0.1" data-max="1" data-format='percent' data-step='0.01'></span>
           <span class='note'>No idea. Current figure is a guess.</span>
         </li>
       </ul>
       <p>Then, for the country as a whole:</p>
       <ul>
-        <li>The peak heat demand will be <span data-var='peak_cooling_GW' data-format="%.2f"> GW</span>
-        <li>The peak electricity demand will be <span data-var='commercial_solar_capacity_GW' data-format="%.2f"> GW</span>, which could be provided by solar PV.
+        <li>The peak heat demand will be <span data-var='commercial_peak_cooling_GW' data-format="%.2f"> GW</span>
+        <li>The peak electricity demand will be <span data-var='commercial_total_airconditioning_electricity_demand_GW' data-format="%.2f"> GW</span>, which could be provided by solar PV.
       </ul>
     </div>
     <h2>Implications for the area of solar PV required</h2>
@@ -185,6 +195,7 @@
     </ul>
     <h2>What has changed in this analysis?</h2>
     <ol>
+      <li>17 August 2011&mdash;Added solar gains and internal gains; refactored so that total works</li>
       <li>12 August 2011&mdash;Added commercial cooling</li>
       <li>1 August 2011&mdash;First attempt</li>
     </ol>
