@@ -16,7 +16,7 @@
   <style>
     body {
       padding: 2% 5%;
-      max-width: 700px;
+      max-width: 720px;
     }
     span.note {
       display: block;
@@ -38,8 +38,9 @@
 
 		function setUpTangle () {
 
-			var home_tangle = new Tangle(document.getElementById("home"), {
+			var home_tangle = new Tangle(document.getElementById("total"), {
 				initialize: function () {
+					// Residential
 					this.homes_M = 40;
 					this.homes_with_airconditioning_percent = 0.5;
 					this.outside_peak_temperature_C = 30;
@@ -48,42 +49,37 @@
 					this.home_heat_created_W = 250;
 					this.home_heat_solar_gain_W = 250;
 					this.home_airconditioning_cop = 3.5;
+					
+					// Commercial
+					this.commercial_cooling_demand_annual_TWh = 103.7;
+			    this.commercial_airconditioning_cop = 3.5;
+			    this.commercial_airconditioning_load_factor = 0.25;
+			    
+			    // Total
+			    this.solar_peak_intensity_WperM2 = 1000;
+					this.solar_efficiency_percent = 10;
+					this.household_south_facing_roof_area_m2 = 10;
 				},
 				update: function () {
+				  // Residential
 					this.home_airconditioning_size_kW = ( this.home_heat_created_W + this.home_heat_solar_gain_W + (this.outside_peak_temperature_C - this.inside_peak_temperature_C) * this.home_leakiness_WperC) / 1000;
 					this.home_airconditioning_electricity_demand_kW = this.home_airconditioning_size_kW / this.home_airconditioning_cop;
 					this.home_total_airconditioning_electricity_demand_GW = this.home_airconditioning_electricity_demand_kW * this.homes_M * this.homes_with_airconditioning_percent;
-				}
-			});
-			
-			var commercial_tangle = new Tangle(document.getElementById("commercial"), {
-			  initialize: function () {
-			    this.commercial_cooling_demand_annual_TWh = 103.7;
-			    this.commercial_airconditioning_cop = 3.5;
-			    this.commercial_airconditioning_load_factor = 0.25;
-			  },
-			  update: function() {
-			    this.commercial_average_cooling_GW = (this.commercial_cooling_demand_annual_TWh / 365.25 * 24);
+					
+					// Commercial
+					this.commercial_average_cooling_GW = (this.commercial_cooling_demand_annual_TWh / 365.25 * 24);
 			    this.commercial_peak_cooling_GW = this.commercial_average_cooling_GW  / this.commercial_airconditioning_load_factor;
 			    this.commercial_total_airconditioning_electricity_demand_GW = this.commercial_peak_cooling_GW / this.commercial_airconditioning_cop;
-			  }
-			});
-			
-			var total_tangle = new Tangle(document.getElementById("total"), {
-			  initialize: function () {
-					this.solar_peak_intensity_WperM2 = 1000;
-					this.solar_efficiency_percent = 10;
-					this.household_south_facing_roof_area_m2 = 10;
-			  },
-			  update: function() {
-			    this.total_solar_capacity_GW = this.commercial_solar_capacity_GW + this.residential_solar_capacity_GW;
+			    
+			    // Total
+			    this.total_solar_capacity_GW = this.commercial_total_airconditioning_electricity_demand_GW + this.home_total_airconditioning_electricity_demand_GW;
           var solar_intensity = this.solar_peak_intensity_WperM2 * (this.solar_efficiency_percent / 100); // W/m2
 					this.solar_area_km2 = ((this.total_solar_capacity_GW * 1e9) / solar_intensity )/1e6;
 					var uk_land_area_km2 = 243610;
 					this.solar_area_percent_country = this.solar_area_km2 / uk_land_area_km2;
 					this.solar_area_per_household_with_airconditioning_m2 = (this.airconditioning_electricity_demand_kW * 1000) / solar_intensity;
 					this.solar_area_percent_household_roof = this.solar_area_per_household_with_airconditioning_m2 / this.household_south_facing_roof_area_m2;
-			  }
+				}
 			});
 		}
 
@@ -92,8 +88,12 @@
 
 <body onload="setUpTangle();">
   <div id='total'>
-    <h1>What is a sensible amount of solar PV for the UK?</h1>
-  	<p>Solar PV works when it is sunny. Air conditioning is needed most when it is sunny. It might therefore be sensible to size our solar PV deployment to match air conditioning use. That might mean about <span data-var='total_solar_capacity_GW' data-format="%.0f"> GW</span> of solar PV.</p>
+    <h1>Is <span data-var='total_solar_capacity_GW' data-format="%.0f"> GW</span> a sensible amount of solar PV for the UK?</h1>
+  	<p><a href="http://en.wikipedia.org/wiki/Photovoltaics">Solar PV</a> works when it is sunny. 
+  	    Air conditioning is needed most when it is sunny. In the absence of cheap and effective energy storage, it might therefore be sensible to size our solar PV deployment to match air conditioning use.
+  	    That might mean about <span data-var='total_solar_capacity_GW' data-format="%.0f"> GW</span> of solar PV.
+  	    The assumptions used to reach that figure are below in blue. You can try out different assumptions by clicking on a blue number and dragging to the left or right.
+  	</p>
   
     <div id='home'>
       <h2><span data-var='home_total_airconditioning_electricity_demand_GW' data-format="%.0f"> GW</span> for air conditioning in the home</h2>
@@ -132,7 +132,7 @@
       <p>Then, per household:</p>
       <ul>
         <li>
-          A typical air conditioning unit will provide <span data-var="home_airconditioning_size_kW" data-format="%.2f"> kW</span> of cooling,
+          A typical air conditioning unit will provide <span data-var="home_airconditioning_size_kW" data-format="%.2f"> kWth</span> of cooling,
           <span class='note'>Sense check: <a href="http://www.heatbusters.com/cooling/product-types/portable-ac">Shops</a> sell portable air conditioning units with peak outputs of 2.5-3.8 kW.<a href="http://www.mitsubishi-aircon.co.uk/">Mitsubishi's</a> small 'M series' systems range from 2.2 to 7.1 kW</span>
         </li>
         <li>which will require <span data-var='home_airconditioning_electricity_demand_kW' data-format="%.2f"> kW</span> of electricity</li>
@@ -162,8 +162,8 @@
       </ul>
       <p>Then, for the country as a whole:</p>
       <ul>
-        <li>The peak heat demand will be <span data-var='commercial_peak_cooling_GW' data-format="%.2f"> GW</span>
-        <li>The peak electricity demand will be <span data-var='commercial_total_airconditioning_electricity_demand_GW' data-format="%.2f"> GW</span>, which could be provided by solar PV.
+        <li>The peak cooling demand will be <span data-var='commercial_peak_cooling_GW' data-format="%.2f"> GWth</span>
+        <li>The peak electricity demand will be <span data-var='commercial_total_airconditioning_electricity_demand_GW' data-format="%.2f"> GWe</span>, which could be provided by solar PV.
       </ul>
     </div>
     <h2>Implications for the area of solar PV required</h2>
@@ -190,12 +190,14 @@
     
     <h2>Caveats, notes and queries</h2>
     <ul>
-      <li>How to deal with the fact that heating through windows is sensitive to intensity of sunshine, not temperature difference</li>
+      <li>The peak in cooling will occur after the peak in sun. Need to adjust the solar PV capacity to reflect this.</li>
+      <li>Will we cool our homes and our businesses at the same time? If not, need to reduce the total.</li>
+      <li>Need some actual figures for solar gain and internal gains.</li>
       <li>What is the load factor for commercial air conditioning? Will this change?</li>
     </ul>
     <h2>What has changed in this analysis?</h2>
     <ol>
-      <li>17 August 2011&mdash;Added solar gains and internal gains; refactored so that total works</li>
+      <li>17 August 2011&mdash;Added solar gains and internal gains; refactored so that total works.</li>
       <li>12 August 2011&mdash;Added commercial cooling</li>
       <li>1 August 2011&mdash;First attempt</li>
     </ol>
