@@ -98,6 +98,19 @@
           'own_use_MW':  0,
           'load_factor':  0.7
         },
+        'mottMac2010FOAKLow': {
+          'capex_M': 4500,
+          'construction_years': 5,
+          'wacc': 0.10  ,
+          'life_years': 60,
+          'opex_M': 118.5,
+          'efficiency':  1.00,
+          'fuel_cost_per_MWh':  0,
+          'peak_capacity_MW':  1600,
+          'days_out_of_action': ((1-0.882) * 365.25),
+          'own_use_MW':  (0.044*1600),
+          'load_factor':  1.0
+        },
         'mottMac2010FOAKMed': {
           'capex_M': 5750.0,
           'construction_years': 6,
@@ -110,7 +123,60 @@
           'days_out_of_action': ((1-0.863) * 365.25),
           'own_use_MW':  0.05*1600,
           'load_factor':  0.9
+        },
+        'mottMac2010FOAKHigh': {
+          'capex_M': 6750.0,
+          'construction_years': 7,
+          'wacc': 0.10  ,
+          'life_years': 55,
+          'opex_M': 186.1,
+          'efficiency':  1.00,
+          'fuel_cost_per_MWh':  0,
+          'peak_capacity_MW':  1600,
+          'days_out_of_action': ((1-0.82) * 365.25),
+          'own_use_MW':  (0.055*1600),
+          'load_factor':  0.8
+        },
+        'pb2011FOAKLow': {
+          'capex_M': 9705.3,
+          'construction_years': 5,
+          'wacc': 0.10  ,
+          'life_years': 40,
+          'opex_M': 231.5,
+          'efficiency':  1.00,
+          'fuel_cost_per_MWh':  0,
+          'peak_capacity_MW':  3300,
+          'days_out_of_action': ((1-0.928) * 365.25),
+          'own_use_MW':  (0.0*3300),
+          'load_factor':  1.0
+        },
+        'pb2011FOAKMed': {
+          'capex_M': 11645.7,
+          'construction_years': 6,
+          'wacc': 0.10  ,
+          'life_years': 40,
+          'opex_M': 303.5,
+          'efficiency':  1.00,
+          'fuel_cost_per_MWh':  0,
+          'peak_capacity_MW':  3300,
+          'days_out_of_action': ((1-0.908) * 365.25),
+          'own_use_MW':  (0.0*3300),
+          'load_factor':  1.0
+        },
+        'pb2011FOAKHigh': {
+          'capex_M': 13589.4,
+          'construction_years': 8,
+          'wacc': 0.10  ,
+          'life_years': 35,
+          'opex_M': 293.1,
+          'efficiency':  1.00,
+          'fuel_cost_per_MWh':  0,
+          'peak_capacity_MW':  3300,
+          'days_out_of_action': ((1-0.888) * 365.25),
+          'own_use_MW':  (0.0*3300),
+          'load_factor':  1.0
         }
+ 
       }
       
       window.setTangleValues = function(name) {
@@ -139,8 +205,17 @@
   </div>
   <h2>Example settings</h2>
   <ul>
-    <li><a onclick='setTangleValues("daveToke")' href='#daveToke'>David Toke nuclear cost forecast</a></li>
-    <li>Mott MacDonald (2010) 3rd generation PWR first of a kind: <a onclick='setTangleValues("mottMac2010FOAKMed")' href='#mottMac2010FOAKMed'>Medium</a></li>
+    <li><a onclick='setTangleValues("daveToke")' href='#daveToke'>David Toke nuclear cost forecast</a> (source: <a href='http://realfeed-intariffs.blogspot.co.uk/2012/05/edfs-nuclear-plans-are-more-expensive.html'>Blog article</a>)</li>
+    <li>Mott MacDonald (2010) 3rd generation PWR first of a kind: 
+        <a onclick='setTangleValues("mottMac2010FOAKLow")' href='#mottMac2010FOAKLow'>Low</a>
+        <a onclick='setTangleValues("mottMac2010FOAKMed")' href='#mottMac2010FOAKMed'>Medium</a>
+        <a onclick='setTangleValues("mottMac2010FOAKHigh")' href='#mottMac2010FOAKHigh'>High</a>
+    </li>
+    <li>Parsons Brinckerhoff (2011) Nuclear PWR (multiple units) first of a kind: 
+        <a onclick='setTangleValues("pb2011FOAKLow")'  href='#pb2011FOAKLow'>Low</a>
+        <a onclick='setTangleValues("pb2011FOAKMed")'  href='#pb2011FOAKMed'>Medium</a>
+        <a onclick='setTangleValues("pb2011FOAKHigh")' href='#pb2011FOAKHigh'>High</a>
+    </li>
 
   </ul>
 
