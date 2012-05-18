@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Calculating a levelised cost of energy</title>
+
+	<!-- Tangle -->
+	<script type="text/javascript" src="Tangle.js"></script>
+
+	<!-- TangleKit (optional) -->
+	<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+	<script type="text/javascript" src="TangleKit/mootools.js"></script>
+	<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+	<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+	<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+  <style>
+    body {
+      padding: 2% 5%;
+      max-width: 700px;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    span[data-var] {
+      color
+    }
+    span[data-var].TKAdjustableNumber  {
+      background-color: #fff;
+    }
+  </style>
+	<!-- example -->
+	<script type="text/javascript">
+
+		function setUpTangle () {
+
+			var element = document.getElementById("lcoe");
+
+			var tangle = new Tangle(element, {
+				initialize: function () {
+          this.capex_M = (808.9*830)/1000;
+          this.construction_years = 2.8;
+          this.wacc = 0.1;
+          this.life_years = 25;
+          this.opex_M = 36.8;
+          this.efficiency = 0.55;
+          this.fuel_cost_per_MWh = 20;
+          this.peak_capacity_MW = 830;
+          this.days_out_of_action = 365.25 * (1-0.897);
+          this.own_use_MW = 830*0.023;
+          this.load_factor = 0.9;
+          
+				},
+				update: function () {
+				  this.power_after_availability_MW = this.peak_capacity_MW * (1 - (this.days_out_of_action / 365.25));
+				  this.power_after_own_use_MW = this.power_after_availability_MW - this.own_use_MW;
+				  this.power_after_load_factor_MW = this.power_after_own_use_MW * this.load_factor;
+				  this.energy_output_per_year_GWh = this.power_after_load_factor_MW * 24 * 365.25/1000;
+				  this.energy_total_TWh = (this.energy_output_per_year_GWh * this.life_years) / 1000;
+				  this.fuel_required_per_year_GWh = this.energy_output_per_year_GWh / this.efficiency;
+				  this.fuel_cost_per_year_M = (this.fuel_required_per_year_GWh * this.fuel_cost_per_MWh) / 1000;
+				  this.cash_total_G = (this.capex_M + ((this.fuel_cost_per_year_M + this.opex_M) * this.life_years))/1000;
+				  var discount_factor = (1+this.wacc), discounted_cost_M = 0, discounted_energy_GWh = 0;
+				  var capital_cost_per_year_in_construction_years_M = this.capex_M / this.construction_years;
+				  for(i = 0, l = this.construction_years; i < l; i++) {
+				    discounted_cost_M = discounted_cost_M + (capital_cost_per_year_in_construction_years_M / discount_factor);
+            discount_factor = discount_factor * (1+this.wacc);
+				  }
+				  for(i = 0, l = this.life_years; i < l; i++) {
+				    discounted_cost_M = discounted_cost_M + ((this.opex_M + this.fuel_cost_per_year_M) / discount_factor);
+				    discounted_energy_GWh = discounted_energy_GWh + (this.energy_output_per_year_GWh / discount_factor);
+            discount_factor = discount_factor * (1+this.wacc);
+				  }
+				  this.cash_total_discounted_G = discounted_cost_M / 1000;
+				  this.energy_total_discounted_TWh = discounted_energy_GWh / 1000;
+				  this.lcoe_per_MWh = (this.cash_total_discounted_G * 1e9) / (this.energy_total_discounted_TWh * 1e6);
+				}
+			});
+		}
+
+	</script>
+</head>
+
+<body onload="setUpTangle();">
+  <h1>Electricity storage cost/efficiency trade-off ready reckoner</h1>
+  <p>To work out what sort of storage might be viable, we need to know the economics of the storage plant and the economics of the best non-storage alternative</p>
+  <h2>The Market</h2>
+  <ul>
+	  <li>The highest electricity price is £<span class="TKAdjustableNumber" data-var="sell_price_per_MWh" data-min="0" data-max="1000">/MWh</span> and the lowest is </li>
+	  <li>The lowest electricity price is £<span class="TKAdjustableNumber" data-var="buy_price_per_MWh" data-min="0" data-max="1000">/MWh</span> and the lowest is </li>
+  </ul>
+  <h2>The Storage</h2>
+  <ul>
+	  <li>The storage cycles <span class="TKAdjustableNumber" data-var="cycles_per_year" data-min="1" data-max="365"> times</span> per year and </li>
+	  <li>lasts <span class="TKAdjustableNumber" data-var="lifetime_in_years" data-min="1" data-max="50"> years</span> and</li>
+	  <li>pays <span class="TKAdjustableNumber" data-var="cost_of_capital_percent" data-min="1" data-max="30"> %</span> on its capital cost.</li>
+  </ul>
+  <h2>The economics</h2>
+  
+	 
+  	
+	<p>At DECC we often report 'levelised costs of energy' (LCOE) in £/MWh. We do this because it represents (roughly) the minimum electricity price at which this plant will be profitable. You can use this tool to quickly ballpark what the levelised cost might be for a power station.</p>
+  
+  <div id='lcoe'>
+    <p>There are two parts to calculating the levelised cost of your power station. First we need to work out what your power station costs. Then we need to work out how much electricity it might produce.</p>
+    <h2>How much does your power station cost?</h2>
+    <p>Let's assume that your power station costs £<span class="TKAdjustableNumber" data-var="capex_M" data-min="1" data-max="5000" data-format='%.0f'> million</span> and takes <span  class="TKAdjustableNumber" data-var="construction_years" data-min="1" data-max="10"> years</span> to construct. To pay for this, you need to borrow money using some combination of bank loans and investments from shareholders. Let's assume they must be paid <span class="TKAdjustableNumber" data-var='wacc' data-min='0.01' data-max='0.2' data-format='percent'></span> interest.</p>
+    <p>Once built, let's assume that it lasts for <span  class="TKAdjustableNumber" data-var='life_years' data-min='10' data-max='40'> years</span>. Staff, maintenance, insurance, management and the like might cost £<span  class="TKAdjustableNumber" data-var='opex_M' data-min="1" data-max='1000'> million</span> a year.</p>
+    <p>Lets assume it requires a fuel to operate, that it is <span  class="TKAdjustableNumber" data-var='efficiency' data-min='0.25' data-max='0.65' data-format='percent'></span> efficient at turning the fuel into electricity and that the fuel costs £<span class="TKAdjustableNumber" data-var="fuel_cost_per_MWh" data-min="0" data-max="100">/MWh</span>.</p>
+    <h2>How much electricity does your power station produce?</h2>
+    <p>Let's assume that your power station has a theoretical peak power of <span  class="TKAdjustableNumber" data-var="peak_capacity_MW" data-min="1" data-max="3000">MW</span>. We then need to adjust for the fact that it will be broken down, being refuelled or being maintained for <span  class="TKAdjustableNumber" data-var='days_out_of_action' data-min='0' data-max='30' data-format='%.0f'> days a year</span>. Then we need to adjust for the <span  class="TKAdjustableNumber" data-var='own_use_MW' data-min='0' data-max='300' data-format='%.0f'>MW</span> of electricity that is consumed on site. Finally, we need to adjust for the fact that it may only run <span  class="TKAdjustableNumber" data-var='load_factor' data-min='0.1' data-max='1.0' data-format='percent'></span> of the time either because there isn't enough wind, wave or sunshine or because the electricity prices aren't high enough to make it economic to run. This means that it will produce <span data-var='energy_output_per_year_GWh' data-format='%.0f'>GWh</span> over a year.
+    <h2>Bringing the two components together</h2>
+    <p>The annual output of <span data-var='energy_output_per_year_GWh' data-format='%.0f'>GWh</span> of electricity will require <span data-var='fuel_required_per_year_GWh' data-format='%.0f'>GWh</span> of fuel, at a cost of £<span data-var='fuel_cost_per_year_M' data-format='%.0f'> million</span> per year.
+    <p>Over its life, the power station will cost £<span data-var='cash_total_G' data-format='%.0f'> billion</span> and produce <span data-var='energy_total_TWh' data-format='%.0f'> TWh</span> of electricity. These figures are discounted at the <span data-var='wacc' data-format='percent'></span> interest rate given above to £<span data-var='cash_total_discounted_G' data-format='%.0f'> billion</span> and <span data-var='energy_total_discounted_TWh' data-format='%.0f'> TWh</span> and the cost is divided by the energy to give a levelised cost of £<span data-var='lcoe_per_MWh' data-format='%.0f'>/MWh</span>.</p>
+  </div>
+
+</body>
+</html>
