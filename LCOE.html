@@ -179,10 +179,16 @@
         }
  
       }
-      
+
       window.setTangleValues = function(name) {
         tangle.setValues(savedValues[name]);
       }
+
+      var hash = window.location.hash.substring(1);
+      if(savedValues[hash] != undefined) {
+        window.setTangleValues(hash);
+      }
+
 		}
     
 	</script>
