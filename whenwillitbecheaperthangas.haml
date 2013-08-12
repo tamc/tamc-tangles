@@ -1,0 +1,256 @@
+%html
+  // Load all the javascript ansd stylesheet dependencies
+  %script{type:'text/javascript', src: "Tangle.js"}
+  - %w{mootools sprintf BVTouchable TangleKit TKLogarithmicAdjustableNumber}.each do |js|
+    %script{type:'text/javascript', src: "TangleKit/#{js}.js"}
+
+  // Prepare the CSS
+  %link{rel:'stylesheet', href:'TangleKit/TangleKit.css', type: 'text/css'}
+  :css
+    body {
+      padding: 2% 5%;
+      max-width: 700px;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    span[data-var] {
+      background-color: #FFFDCC;
+    }
+    span[data-var].TKAdjustableNumber, span[data-var].TKLogarithmicAdjustableNumber {
+      background-color: #fff;
+    }
+    span.result {
+      font-weight: bold;
+    }
+    td.control {
+      text-align: right;
+      width: 150px;
+    }
+    div#warning {
+      background: yellow;
+      border: solid 1px black;
+      padding: 5px;
+      margin: 5px;
+      width: 100%;
+      text-align: center;
+    }
+
+  // Draw the interface
+  %body
+    %h1 When could nuclear-electricity be cheaper than gas-electricity?
+
+    %div#warning Work in progress
+
+
+    %ul
+      %li The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built
+      %li Currently ignoring time taken to construct
+      %li Finance rates must be the net post tax effective rate
+
+    #tangle
+      %table
+        %tr
+          %th
+          %th{colspan:2} Gas-electricity
+          %th{colspan:2} Nuclear-electricity
+        %tr
+          %th Setting
+          %th Today
+          %th Annual change
+          %th Today
+          %th Annual change
+
+        - technologies = %w{ gas nuclear }
+        :ruby
+          parameters = [
+            ['Capital cost', 'capex', '&pound;/kW',  100, 5000, true, %w{gas nuclear}],
+            ['Operating cost', 'opex', '&pound;/kW-yr',  1, 50, true, %w{gas nuclear}],
+            ['Plant life', 'life', 'years',  10, 60, false, %w{gas nuclear}],
+            ['Natural gas', 'gas', '&pound;/MWh',  10, 100, true, %w{gas}],
+            ['Carbon', 'carbon', '&pound;/tCO2',  0, 500, true, %w{gas}],
+            ['Decomissioning', 'decommissioning', '&pound;/kW',  0, 500, false, %w{nuclear}],
+            ['Insurance', 'insurance', '&pound;/MW-yr',  0, 500, false, %w{nuclear}]
+          ]
+        - parameters.each do |p|
+          %tr
+            %td= p[0]
+            - technologies.each do |t|
+              %td.control
+                - if p[6].include?(t)
+                  %span.TKLogarithmicAdjustableNumber{data:{ var: p[1]+"_"+t, min: p[3], max: p[4]}}
+                    = p[2]
+              %td.control
+                - if p[5]
+                  %span.TKAdjustableNumber{data:{var: p[1]+"_change_"+t, format: 'percent', step: 0.01, min: -0.2, max: 0.2}}
+        %tr
+          %td
+            Cost of capital
+          %td.control
+            %span.TKAdjustableNumber{data:{var: 'wacc_gas', format: 'percent', step: 0.01, min: 0, max: 0.5}}
+          %td &nbsp;
+          %td.control
+            %span.TKAdjustableNumber{data:{var: 'wacc_nuclear', format: 'percent', step: 0.01, min: 0, max: 0.5}}
+          %td &nbsp;
+        %tr
+          %td
+            Load factor
+          %td.control
+            %span.TKAdjustableNumber{data:{var: 'load_factor', format: 'percent', step: 0.01, min: 0, max: 1.0}}
+          %td &nbsp;
+          %td.control
+            %span.TKAdjustableNumber{data:{var: 'load_factor', format: 'percent', step: 0.01, min: 0, max: 1.0}}
+        %tr
+          %td
+            Efficiency
+          %td.control
+            %span.TKAdjustableNumber{data:{var: 'efficiency_gas', format: 'percent', step: 0.01, min: 0.1, max: 0.7}}
+          %td &nbsp;
+          %td.control &nbsp;
+        %tr
+          %td
+            Year's from now
+          %td.control
+            %span.TKAdjustableNumber{data:{var: 'year', min: 0, max: 50}}
+        %tr
+          %td
+            Levlised cost
+          %td.control
+            &pound;
+            %span{data:{var:'levelised_cost_gas', format: "%.0f"}}
+              \/MWh
+          %td &nbsp;
+          %td.control
+            &pound;
+            %span{data:{var:'levelised_cost_nuclear', format: "%.0f"}}
+              \/MWh
+
+
+  // Do the caclulations
+  :coffeescript
+    # This takes a first number, a number of periods and a multiplier to apply to that first
+    # number each period. It returns an array.
+    #
+    # e.g., expandArray(10, 5, 0.1) # =  [10, 11, 12.1, 13.31, 14.641] 
+    expandArray = (number, periods, change_per_period = 0) ->
+      result = [number]
+      for i in [1..(periods-1)]
+        result[i] = result[i-1] * (1+change_per_period)
+      result
+
+    # This calculates the net present value of the content of the first argument
+    # using the second argument as the discount factor. If the third argument is
+    # zero then the first element of the array has a discount factor of 1
+    # if it is 1 then the first element of the array has a discount factor of (1+discount_factor)
+    npv = (array, discount_factor, initial_offset = 0) ->
+      n = 0
+      df = (1/(1+discount_factor))
+      r = Math.pow(df,initial_offset)
+      for v in array
+        n = n + (v*r)
+        r = r * df
+      n
+
+    multiply = ( array1, array2) ->
+      for a, i in array1
+        a * array2[i]
+
+    time_horizon = 100 # years
+
+    tangle =
+      initialize: () ->
+        # Things that are common to both technologies and change
+        @capex_gas = 600 # £/kW
+        @capex_nuclear = 4100
+        @capex_change_gas = 0
+        @capex_change_nuclear = 0
+
+        @opex_nuclear = 72 # £/kW/yr
+        @opex_change_nuclear = 0
+        @opex_gas = 22
+        @opex_change_gas = 0
+
+        # Things that are common to both technologies but don't change
+        @life_nuclear = 60
+        @life_gas = 25
+        @wacc_gas = 0.075
+        @wacc_nuclear = 0.095
+
+        # Things that are only relevant to gas
+        @gas_gas = 20 # £/MWh
+        @gas_change_gas = 0
+        @carbon_gas = 12 # £/tCO2e
+        @carbon_change_gas = 0
+        @efficiency_gas = 0.55
+        @emissions_intensity_gas= 380 # gCO2/kWh
+
+        # Things that are only relevant to nuclear
+        @decommissioning_nuclear = 0 # £/kW
+        @insurance_nuclear = 10 # £/kW/yr
+
+        # Things that should be identical for both
+        @load_factor = 0.93
+
+        # Control
+        @year = 0
+
+      update: () ->
+        
+        for p in ['capex', 'opex', 'gas', 'carbon']
+          @[p+"_over_time_gas"] = expandArray(@[p+"_gas"], time_horizon, @[p+"_change_gas"]) if @[p+"_gas"]?
+          @[p+"_over_time_nuclear"] = expandArray(@[p+"_nuclear"], time_horizon, @[p+"_change_nuclear"]) if @[p+"_nuclear"]?
+        
+        start_period = @year # Start at today
+        life = @life_gas
+        end_period = start_period + life
+
+        load_factor = @load_factor
+        efficiency = @efficiency_gas
+        emissions_intensity = @emissions_intensity_gas
+        gas_cost = @gas_over_time_gas.slice(start_period, end_period)
+        carbon_cost = (@carbon_over_time_gas.slice(start_period, end_period))
+        capex = @capex_over_time_gas[start_period]
+        opex = @opex_over_time_gas[start_period]
+        wacc = @wacc_gas
+
+        electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
+        fuel_used = ((e/efficiency) for e in electricity_produced) # MWh
+        carbon_emitted = ((f*emissions_intensity/1000) for f in fuel_used) # tCO2
+        fuel_cost = multiply(gas_cost, fuel_used) # £
+        carbon_cost = multiply(carbon_cost, carbon_emitted) # £
+        capex_cost = [capex] # £
+        opex_cost = expandArray(opex, life) # £
+
+        npv_electricity_produced = npv(electricity_produced, wacc, 1)
+
+        levelise = (array, offset = 0) ->
+          npv(array, wacc, offset) / npv_electricity_produced
+
+        @levelised_cost_gas = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(fuel_cost, 1) + levelise(carbon_cost, 1)
+
+        load_factor = @load_factor
+        life = @life_nuclear
+
+        decommissioning = @decommissioning_nuclear
+        insurance = @insurance_nuclear
+
+        capex = @capex_over_time_nuclear[start_period]
+        opex = @opex_over_time_nuclear[start_period]
+        wacc = @wacc_nuclear
+
+        electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
+        capex_cost = [capex] # £
+        decomissioning_cost = [decommissioning] # £
+        opex_cost = expandArray(opex, life) # £
+        insurance_cost = expandArray(insurance, life) # £
+
+        npv_electricity_produced = npv(electricity_produced, wacc, 1)
+
+        @levelised_cost_nuclear = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(insurance_cost, 1) + levelise(decomissioning_cost, life)
+
+    t = new Tangle(document.getElementById("tangle"), tangle)
