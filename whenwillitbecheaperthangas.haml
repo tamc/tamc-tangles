@@ -1,4 +1,5 @@
-%html
+%html{debug:true}
+  %script{type:'text/javascript', src: "https://getfirebug.com/firebug-lite.js"}
   // Load all the javascript ansd stylesheet dependencies
   %script{type:'text/javascript', src: "Tangle.js"}
   - %w{mootools sprintf BVTouchable TangleKit TKLogarithmicAdjustableNumber}.each do |js|
