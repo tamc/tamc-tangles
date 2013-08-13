@@ -3,13 +3,13 @@
   %script{type:'text/javascript', src: "Tangle.js"}
   - %w{mootools sprintf BVTouchable TangleKit TKLogarithmicAdjustableNumber}.each do |js|
     %script{type:'text/javascript', src: "TangleKit/#{js}.js"}
+  %script{type:'text/javascript', src: "d3.min.js"}
 
   // Prepare the CSS
   %link{rel:'stylesheet', href:'TangleKit/TangleKit.css', type: 'text/css'}
   :css
     body {
       padding: 2% 5%;
-      max-width: 700px;
     }
     span.note {
       display: block;
@@ -40,6 +40,40 @@
       width: 100%;
       text-align: center;
     }
+    #levelised_cost_chart {
+      float: right;
+      width: 400px;
+      height: 400px;
+      margin: 0;
+      padding: 0;
+    }
+    .axis path, .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+
+    .axislabel {
+      text-anchor: end;
+    }
+
+    .line {
+      fill: none;
+      stroke: black;
+      stroke-width: 3px;
+    }
+
+    .gas {
+      stroke: green;
+    }
+
+    .nuclear {
+      stroke: blue;
+    }
+
+    text.label {
+      dominant-baseline: middle;
+    }
 
   // Draw the interface
   %body
@@ -47,12 +81,7 @@
 
     %div#warning Work in progress
 
-
-    %ul
-      %li The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built
-      %li Currently ignoring time taken to construct
-      %li Finance rates must be the net post tax effective rate
-      %li Should produce a levelised cost over the lifetime of the longest life'd technology
+    #levelised_cost_chart
 
     #tangle
       %table
@@ -113,24 +142,14 @@
             %span.TKAdjustableNumber{data:{var: 'efficiency_gas', format: 'percent', step: 0.01, min: 0.1, max: 0.7}}
           %td &nbsp;
           %td.control &nbsp;
-        %tr
-          %td
-            Year's from now
-          %td.control
-            %span.TKAdjustableNumber{data:{var: 'year', min: 0, max: 50}}
-        %tr
-          %td
-            Levlised cost
-          %td.control
-            &pound;
-            %span{data:{var:'levelised_cost_gas', format: "%.0f"}}
-              \/MWh
-          %td &nbsp;
-          %td.control
-            &pound;
-            %span{data:{var:'levelised_cost_nuclear', format: "%.0f"}}
-              \/MWh
 
+    %h2 Notes
+
+    %ul
+      %li The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built
+      %li Currently ignoring time taken to construct
+      %li Finance rates must be the net post tax effective rate
+      %li Should produce a levelised cost over the lifetime of the longest life'd technology
 
   // Do the caclulations
   :coffeescript
@@ -161,10 +180,14 @@
       for a, i in array1
         a * array2[i]
 
-    time_horizon = 100 # years
+    start_year = 2015
+    end_year = 2055
 
     tangle =
       initialize: () ->
+
+        # FIRST THE TANGLE VARIABLES
+
         # Things that are common to both technologies and change
         @capex_gas = 600 # £/kW
         @capex_nuclear = 4100
@@ -197,61 +220,155 @@
         # Things that should be identical for both
         @load_factor = 0.93
 
-        # Control
-        @year = 0
+        # Results
+        @levelised_cost_gas = []
+        @levelised_cost_nuclear = []
+
+        # THEN THE CHART
+
+        margin =
+          top: 25
+          right: 50
+          bottom: 20
+          left: 50
+
+        width = 400
+        height = 300
+
+        unit = "£/MWh"
+
+        @xScale = xScale = d3.scale.linear()
+                  .domain([start_year, end_year])
+                  .range([0, width - margin.left - margin.right])
+
+        @yScale = yScale = d3.scale.linear()
+                  .domain([0, 200])
+                  .range([height - margin.top - margin.bottom, 0])
+
+        xAxis = d3.svg.axis()
+          .scale(xScale)
+          .orient("bottom")
+          .tickFormat(d3.format("0.f"))
+
+        yAxis = d3.svg.axis().scale(yScale).orient("left")
+
+        @line = d3.svg.line()
+          .x((d,i) -> xScale(start_year+i))
+          .y((d,i) -> yScale(+d))
+
+        chart = d3.select("#levelised_cost_chart")
+                  .append("svg")
+                    .append("g")
+                      .attr('class', 'drawing')
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+        chart.append("path")
+          .attr('class', 'line gas')
+
+        chart.append("path")
+          .attr('class', 'line nuclear')
+
+        chart.append("g")
+          .attr('class', 'x axis')
+          # FIXME: Looks wrong
+          .attr("transform", "translate(0," + yScale.range()[0] + ")")
+          .call(xAxis)
+
+        chart.append("g")
+          .attr('class', 'y axis')
+          # FIXME: Looks wrong
+          .attr("transform", "translate(0," + xScale.range()[0] + ")")
+          .call(yAxis)
+
+        chart.append("text")
+          .attr('class', 'y axislabel')
+          # FIXME: Looks wrong
+          .attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")")
+          .text(unit)
+
+        chart.append("text")
+          .attr('class', 'gas label')
+          .attr("transform", "translate(" + (xScale.range()[1]) + ",0)")
+          .text("Gas")
+
+        chart.append("text")
+          .attr('class', 'nuclear label')
+          .attr("transform", "translate(" + (xScale.range()[1]) + ",0)")
+          .text("Nuclear")
+
 
       update: () ->
+
+        time_horizon = end_year - start_year + Math.max(@life_nuclear, @life_gas)
         
         for p in ['capex', 'opex', 'gas', 'carbon']
           @[p+"_over_time_gas"] = expandArray(@[p+"_gas"], time_horizon, @[p+"_change_gas"]) if @[p+"_gas"]?
           @[p+"_over_time_nuclear"] = expandArray(@[p+"_nuclear"], time_horizon, @[p+"_change_nuclear"]) if @[p+"_nuclear"]?
-        
-        start_period = @year # Start at today
-        life = @life_gas
-        end_period = start_period + life
 
-        load_factor = @load_factor
-        efficiency = @efficiency_gas
-        emissions_intensity = @emissions_intensity_gas
-        gas_cost = @gas_over_time_gas.slice(start_period, end_period)
-        carbon_cost = (@carbon_over_time_gas.slice(start_period, end_period))
-        capex = @capex_over_time_gas[start_period]
-        opex = @opex_over_time_gas[start_period]
-        wacc = @wacc_gas
+        for start_period in [0..(end_year-start_year)]
+          life = @life_gas
+          end_period = start_period + life
 
-        electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
-        fuel_used = ((e/efficiency) for e in electricity_produced) # MWh
-        carbon_emitted = ((f*emissions_intensity/1000) for f in fuel_used) # tCO2
-        fuel_cost = multiply(gas_cost, fuel_used) # £
-        carbon_cost = multiply(carbon_cost, carbon_emitted) # £
-        capex_cost = [capex] # £
-        opex_cost = expandArray(opex, life) # £
+          load_factor = @load_factor
+          efficiency = @efficiency_gas
+          emissions_intensity = @emissions_intensity_gas
+          gas_cost = @gas_over_time_gas.slice(start_period, end_period)
+          carbon_cost = (@carbon_over_time_gas.slice(start_period, end_period))
+          capex = @capex_over_time_gas[start_period]
+          opex = @opex_over_time_gas[start_period]
+          wacc = @wacc_gas
 
-        npv_electricity_produced = npv(electricity_produced, wacc, 1)
+          electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
+          fuel_used = ((e/efficiency) for e in electricity_produced) # MWh
+          carbon_emitted = ((f*emissions_intensity/1000) for f in fuel_used) # tCO2
+          fuel_cost = multiply(gas_cost, fuel_used) # £
+          carbon_cost = multiply(carbon_cost, carbon_emitted) # £
+          capex_cost = [capex] # £
+          opex_cost = expandArray(opex, life) # £
 
-        levelise = (array, offset = 0) ->
-          npv(array, wacc, offset) / npv_electricity_produced
+          npv_electricity_produced = npv(electricity_produced, wacc, 1)
 
-        @levelised_cost_gas = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(fuel_cost, 1) + levelise(carbon_cost, 1)
+          levelise = (array, offset = 0) ->
+            npv(array, wacc, offset) / npv_electricity_produced
 
-        load_factor = @load_factor
-        life = @life_nuclear
+          @levelised_cost_gas[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(fuel_cost, 1) + levelise(carbon_cost, 1)
 
-        decommissioning = @decommissioning_nuclear
-        insurance = @insurance_nuclear
+          load_factor = @load_factor
+          life = @life_nuclear
 
-        capex = @capex_over_time_nuclear[start_period]
-        opex = @opex_over_time_nuclear[start_period]
-        wacc = @wacc_nuclear
+          decommissioning = @decommissioning_nuclear
+          insurance = @insurance_nuclear
 
-        electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
-        capex_cost = [capex] # £
-        decomissioning_cost = [decommissioning] # £
-        opex_cost = expandArray(opex, life) # £
-        insurance_cost = expandArray(insurance, life) # £
+          capex = @capex_over_time_nuclear[start_period]
+          opex = @opex_over_time_nuclear[start_period]
+          wacc = @wacc_nuclear
 
-        npv_electricity_produced = npv(electricity_produced, wacc, 1)
+          electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
+          capex_cost = [capex] # £
+          decomissioning_cost = [decommissioning] # £
+          opex_cost = expandArray(opex, life) # £
+          insurance_cost = expandArray(insurance, life) # £
 
-        @levelised_cost_nuclear = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(insurance_cost, 1) + levelise(decomissioning_cost, life)
+          npv_electricity_produced = npv(electricity_produced, wacc, 1)
+
+          @levelised_cost_nuclear[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(insurance_cost, 1) + levelise(decomissioning_cost, life)
+
+        chart = d3.select("#levelised_cost_chart .drawing")
+
+        chart.select("path.gas")
+          .transition()
+          .attr("d", @line(@levelised_cost_gas))
+
+        chart.select("path.nuclear")
+          .transition()
+          .attr("d", @line(@levelised_cost_nuclear))
+
+        chart.select("text.gas")
+          .transition()
+          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_gas[@levelised_cost_gas.length-1])+")")
+
+        chart.select("text.nuclear")
+          .transition()
+          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_nuclear[@levelised_cost_nuclear.length-1])+")")
 
     t = new Tangle(document.getElementById("tangle"), tangle)
