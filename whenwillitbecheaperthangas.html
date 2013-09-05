@@ -57,8 +57,12 @@
       shape-rendering: crispEdges;
     }
     
-    .axislabel {
+    .yaxislabel {
       text-anchor: end;
+    }
+    
+    .xaxislabel {
+      text-anchor: middle;
     }
     
     .line {
@@ -134,6 +138,25 @@
           </td>
           <td class='control'>
             <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='opex_change_nuclear'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Construction time</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='15' data-min='1' data-var='construction_time_gas'>
+              yr
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='construction_time_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='15' data-min='1' data-var='construction_time_nuclear'>
+              yr
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='construction_time_change_nuclear'></span>
           </td>
         </tr>
         <tr>
@@ -253,9 +276,7 @@
     <h2>Notes</h2>
     <ul>
       <li>The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built</li>
-      <li>Currently ignoring time taken to construct</li>
       <li>Finance rates must be the net post tax effective rate</li>
-      <li>Should produce a levelised cost over the lifetime of the longest life'd technology</li>
     </ul>
     <div id='links'>
       The source code for this tangle is at
@@ -277,6 +298,12 @@
           change_per_period = 0;
         }
         result = [number];
+        if (periods === 1) {
+          return result;
+        }
+        if (periods < 1) {
+          return [];
+        }
         for (i = _i = 1, _ref = periods - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
           result[i] = result[i - 1] * (1 + change_per_period);
         }
@@ -328,6 +355,8 @@
           this.life_gas = 25;
           this.wacc_gas = 0.075;
           this.wacc_nuclear = 0.095;
+          this.construction_time_gas = 1;
+          this.construction_time_nuclear = 7;
           this.gas_gas = 20;
           this.gas_change_gas = 0;
           this.carbon_gas = 12;
@@ -362,12 +391,13 @@
           chart.append("path").attr('class', 'line nuclear');
           chart.append("g").attr('class', 'x axis').attr("transform", "translate(0," + yScale.range()[0] + ")").call(xAxis);
           chart.append("g").attr('class', 'y axis').attr("transform", "translate(0," + xScale.range()[0] + ")").call(yAxis);
-          chart.append("text").attr('class', 'y axislabel').attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")").text(unit);
+          chart.append("text").attr('class', 'xaxislabel').attr("transform", "translate(" + ((xScale.range()[0] + xScale.range()[1]) / 2.0) + "," + (yScale.range()[0] + 35) + ")").text("Year in which construction starts");
+          chart.append("text").attr('class', 'yaxislabel').attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")").text(unit);
           chart.append("text").attr('class', 'gas label').attr("transform", "translate(" + (xScale.range()[1]) + ",0)").text("Gas");
           return chart.append("text").attr('class', 'nuclear label').attr("transform", "translate(" + (xScale.range()[1]) + ",0)").text("Nuclear");
         },
         update: function() {
-          var capex, capex_cost, carbon_cost, carbon_emitted, chart, decomissioning_cost, decommissioning, e, efficiency, electricity_produced, emissions_intensity, end_period, f, fuel_cost, fuel_used, gas_cost, insurance, insurance_cost, levelise, life, load_factor, npv_electricity_produced, opex, opex_cost, p, start_period, time_horizon, wacc, _i, _j, _len, _ref, _ref1;
+          var capex, capex_cost, carbon_cost, carbon_emitted, chart, construction_start, construction_time, decomissioning_cost, decommissioning, e, efficiency, electricity_produced, emissions_intensity, f, fuel_cost, fuel_used, gas_cost, insurance, insurance_cost, levelise, life, load_factor, npv_electricity_produced, operation_end, operation_start, opex, opex_cost, p, time_horizon, wacc, _i, _j, _len, _ref, _ref1;
           time_horizon = end_year - start_year + Math.max(this.life_nuclear, this.life_gas);
           _ref = ['capex', 'opex', 'gas', 'carbon'];
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -379,16 +409,18 @@
               this[p + "_over_time_nuclear"] = expandArray(this[p + "_nuclear"], time_horizon, this[p + "_change_nuclear"]);
             }
           }
-          for (start_period = _j = 0, _ref1 = end_year - start_year; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; start_period = 0 <= _ref1 ? ++_j : --_j) {
+          for (construction_start = _j = 0, _ref1 = end_year - start_year; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; construction_start = 0 <= _ref1 ? ++_j : --_j) {
             life = this.life_gas;
-            end_period = start_period + life;
+            construction_time = this.construction_time_gas;
+            operation_start = construction_start + construction_time;
+            operation_end = operation_start + life;
             load_factor = this.load_factor;
             efficiency = this.efficiency_gas;
             emissions_intensity = this.emissions_intensity_gas;
-            gas_cost = this.gas_over_time_gas.slice(start_period, end_period);
-            carbon_cost = this.carbon_over_time_gas.slice(start_period, end_period);
-            capex = this.capex_over_time_gas[start_period];
-            opex = this.opex_over_time_gas[start_period];
+            gas_cost = this.gas_over_time_gas.slice(operation_start, operation_end);
+            carbon_cost = this.carbon_over_time_gas.slice(operation_start, operation_end);
+            capex = this.capex_over_time_gas[construction_start];
+            opex = this.opex_over_time_gas[construction_start];
             wacc = this.wacc_gas;
             electricity_produced = expandArray(load_factor * 365.25 * 24 / 1000, life);
             fuel_used = (function() {
@@ -411,30 +443,33 @@
             })();
             fuel_cost = multiply(gas_cost, fuel_used);
             carbon_cost = multiply(carbon_cost, carbon_emitted);
-            capex_cost = [capex];
+            capex_cost = expandArray(capex / construction_time, construction_time);
             opex_cost = expandArray(opex, life);
-            npv_electricity_produced = npv(electricity_produced, wacc, 1);
+            npv_electricity_produced = npv(electricity_produced, wacc, construction_time);
             levelise = function(array, offset) {
               if (offset == null) {
                 offset = 0;
               }
               return npv(array, wacc, offset) / npv_electricity_produced;
             };
-            this.levelised_cost_gas[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(fuel_cost, 1) + levelise(carbon_cost, 1);
+            this.levelised_cost_gas[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(fuel_cost, construction_time) + levelise(carbon_cost, construction_time);
             load_factor = this.load_factor;
+            construction_time = this.construction_time_nuclear;
             life = this.life_nuclear;
+            operation_start = construction_start + construction_time;
+            operation_end = operation_start + life;
             decommissioning = this.decommissioning_nuclear;
             insurance = this.insurance_nuclear;
-            capex = this.capex_over_time_nuclear[start_period];
-            opex = this.opex_over_time_nuclear[start_period];
+            capex = this.capex_over_time_nuclear[construction_start];
+            opex = this.opex_over_time_nuclear[construction_start];
             wacc = this.wacc_nuclear;
             electricity_produced = expandArray(load_factor * 365.25 * 24 / 1000, life);
-            capex_cost = [capex];
+            capex_cost = expandArray(capex / construction_time, construction_time);
             decomissioning_cost = [decommissioning];
             opex_cost = expandArray(opex, life);
             insurance_cost = expandArray(insurance, life);
-            npv_electricity_produced = npv(electricity_produced, wacc, 1);
-            this.levelised_cost_nuclear[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(insurance_cost, 1) + levelise(decomissioning_cost, life);
+            npv_electricity_produced = npv(electricity_produced, wacc, construction_time);
+            this.levelised_cost_nuclear[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(insurance_cost, construction_time) + levelise(decomissioning_cost, construction_time + life);
           }
           chart = d3.select("#levelised_cost_chart .drawing");
           chart.select("path.gas").transition().attr("d", this.line(this.levelised_cost_gas));

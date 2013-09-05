@@ -55,8 +55,12 @@
       shape-rendering: crispEdges;
     }
 
-    .axislabel {
+    .yaxislabel {
       text-anchor: end;
+    }
+
+    .xaxislabel {
+      text-anchor: middle;
     }
 
     .line {
@@ -103,6 +107,7 @@
           parameters = [
             ['Capital cost', 'capex', '&pound;/kW',  100, 5000, true, %w{gas nuclear}],
             ['Operating cost', 'opex', '&pound;/kW-yr',  1, 50, true, %w{gas nuclear}],
+            ['Construction time', 'construction_time', 'yr',  1, 15, true, %w{gas nuclear}],
             ['Plant life', 'life', 'years',  10, 60, false, %w{gas nuclear}],
             ['Natural gas', 'gas', '&pound;/MWh',  10, 100, true, %w{gas}],
             ['Carbon', 'carbon', '&pound;/tCO2',  0, 500, true, %w{gas}],
@@ -149,9 +154,7 @@
 
     %ul
       %li The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built
-      %li Currently ignoring time taken to construct
       %li Finance rates must be the net post tax effective rate
-      %li Should produce a levelised cost over the lifetime of the longest life'd technology
 
     #links
       The source code for this tangle is at 
@@ -170,6 +173,8 @@
     # e.g., expandArray(10, 5, 0.1) # =  [10, 11, 12.1, 13.31, 14.641] 
     expandArray = (number, periods, change_per_period = 0) ->
       result = [number]
+      return result if periods == 1
+      return [] if periods < 1
       for i in [1..(periods-1)]
         result[i] = result[i-1] * (1+change_per_period)
       result
@@ -215,6 +220,8 @@
         @life_gas = 25
         @wacc_gas = 0.075
         @wacc_nuclear = 0.095
+        @construction_time_gas = 1 # years
+        @construction_time_nuclear = 7 # years
 
         # Things that are only relevant to gas
         @gas_gas = 20 # £/MWh
@@ -292,7 +299,13 @@
           .call(yAxis)
 
         chart.append("text")
-          .attr('class', 'y axislabel')
+          .attr('class', 'xaxislabel')
+          # FIXME: Looks wrong
+          .attr("transform", "translate("+((xScale.range()[0]+xScale.range()[1])/2.0)+","+(yScale.range()[0]+35)+")")
+          .text("Year in which construction starts")
+
+        chart.append("text")
+          .attr('class', 'yaxislabel')
           # FIXME: Looks wrong
           .attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")")
           .text(unit)
@@ -316,18 +329,20 @@
           @[p+"_over_time_gas"] = expandArray(@[p+"_gas"], time_horizon, @[p+"_change_gas"]) if @[p+"_gas"]?
           @[p+"_over_time_nuclear"] = expandArray(@[p+"_nuclear"], time_horizon, @[p+"_change_nuclear"]) if @[p+"_nuclear"]?
 
-        for start_period in [0..(end_year-start_year)]
+        for construction_start in [0..(end_year-start_year)]
           # Work out the answer for gas
           life = @life_gas
-          end_period = start_period + life
+          construction_time = @construction_time_gas
+          operation_start = construction_start + construction_time
+          operation_end = operation_start + life
 
           load_factor = @load_factor
           efficiency = @efficiency_gas
           emissions_intensity = @emissions_intensity_gas
-          gas_cost = @gas_over_time_gas.slice(start_period, end_period)
-          carbon_cost = (@carbon_over_time_gas.slice(start_period, end_period))
-          capex = @capex_over_time_gas[start_period]
-          opex = @opex_over_time_gas[start_period]
+          gas_cost = @gas_over_time_gas.slice(operation_start, operation_end)
+          carbon_cost = (@carbon_over_time_gas.slice(operation_start, operation_end))
+          capex = @capex_over_time_gas[construction_start]
+          opex = @opex_over_time_gas[construction_start]
           wacc = @wacc_gas
 
           electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
@@ -335,36 +350,39 @@
           carbon_emitted = ((f*emissions_intensity/1000) for f in fuel_used) # tCO2
           fuel_cost = multiply(gas_cost, fuel_used) # £
           carbon_cost = multiply(carbon_cost, carbon_emitted) # £
-          capex_cost = [capex] # £
+          capex_cost = expandArray(capex/construction_time, construction_time)
           opex_cost = expandArray(opex, life) # £
 
-          npv_electricity_produced = npv(electricity_produced, wacc, 1)
+          npv_electricity_produced = npv(electricity_produced, wacc, construction_time)
 
           levelise = (array, offset = 0) ->
             npv(array, wacc, offset) / npv_electricity_produced
 
-          @levelised_cost_gas[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(fuel_cost, 1) + levelise(carbon_cost, 1)
+          @levelised_cost_gas[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(fuel_cost, construction_time) + levelise(carbon_cost, construction_time)
 
           # Work out the answer for nuclear
           load_factor = @load_factor
+          construction_time = @construction_time_nuclear
           life = @life_nuclear
+          operation_start = construction_start + construction_time
+          operation_end = operation_start + life
 
           decommissioning = @decommissioning_nuclear
           insurance = @insurance_nuclear
 
-          capex = @capex_over_time_nuclear[start_period]
-          opex = @opex_over_time_nuclear[start_period]
+          capex = @capex_over_time_nuclear[construction_start]
+          opex = @opex_over_time_nuclear[construction_start]
           wacc = @wacc_nuclear
 
           electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
-          capex_cost = [capex] # £
+          capex_cost = expandArray(capex/construction_time, construction_time)
           decomissioning_cost = [decommissioning] # £
           opex_cost = expandArray(opex, life) # £
           insurance_cost = expandArray(insurance, life) # £
 
-          npv_electricity_produced = npv(electricity_produced, wacc, 1)
+          npv_electricity_produced = npv(electricity_produced, wacc, construction_time)
 
-          @levelised_cost_nuclear[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(insurance_cost, 1) + levelise(decomissioning_cost, life)
+          @levelised_cost_nuclear[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(insurance_cost, construction_time) + levelise(decomissioning_cost, construction_time + life)
 
         chart = d3.select("#levelised_cost_chart .drawing")
 
