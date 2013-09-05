@@ -288,25 +288,21 @@
 
         chart.append("g")
           .attr('class', 'x axis')
-          # FIXME: Looks wrong
           .attr("transform", "translate(0," + yScale.range()[0] + ")")
           .call(xAxis)
 
         chart.append("g")
           .attr('class', 'y axis')
-          # FIXME: Looks wrong
           .attr("transform", "translate(0," + xScale.range()[0] + ")")
           .call(yAxis)
 
         chart.append("text")
           .attr('class', 'xaxislabel')
-          # FIXME: Looks wrong
           .attr("transform", "translate("+((xScale.range()[0]+xScale.range()[1])/2.0)+","+(yScale.range()[0]+35)+")")
           .text("Year in which construction starts")
 
         chart.append("text")
           .attr('class', 'yaxislabel')
-          # FIXME: Looks wrong
           .attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")")
           .text(unit)
 
