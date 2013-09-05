@@ -317,6 +317,7 @@
           @[p+"_over_time_nuclear"] = expandArray(@[p+"_nuclear"], time_horizon, @[p+"_change_nuclear"]) if @[p+"_nuclear"]?
 
         for start_period in [0..(end_year-start_year)]
+          # Work out the answer for gas
           life = @life_gas
           end_period = start_period + life
 
@@ -344,6 +345,7 @@
 
           @levelised_cost_gas[start_period] = levelise(capex_cost, 0) + levelise(opex_cost, 1) + levelise(fuel_cost, 1) + levelise(carbon_cost, 1)
 
+          # Work out the answer for nuclear
           load_factor = @load_factor
           life = @life_nuclear
 
