@@ -82,6 +82,14 @@
     text.label {
       dominant-baseline: middle;
     }
+    
+    tr.series td.label {
+      width: 150px;
+    }
+    
+    td.data {
+      text-align: right;
+    }
   </style>
   <!-- / Draw the interface -->
   <body>
@@ -103,6 +111,25 @@
           <th>Annual change</th>
         </tr>
         <tr>
+          <td>Pre-development cost</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='5000' data-min='0' data-var='predev_gas'>
+              &pound;/kW
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='predev_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='5000' data-min='0' data-var='predev_nuclear'>
+              &pound;/kW
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='predev_change_nuclear'></span>
+          </td>
+        </tr>
+        <tr>
           <td>Capital cost</td>
           <td class='control'>
             <span class='TKLogarithmicAdjustableNumber' data-max='5000' data-min='100' data-var='capex_gas'>
@@ -122,7 +149,7 @@
           </td>
         </tr>
         <tr>
-          <td>Operating cost</td>
+          <td>Fixed operating cost</td>
           <td class='control'>
             <span class='TKLogarithmicAdjustableNumber' data-max='50' data-min='1' data-var='opex_gas'>
               &pound;/kW-yr
@@ -138,6 +165,122 @@
           </td>
           <td class='control'>
             <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='opex_change_nuclear'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Variable operating cost</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='10' data-min='0' data-var='variable_opex_gas'>
+              &pound;/MWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='variable_opex_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='10' data-min='0' data-var='variable_opex_nuclear'>
+              &pound;/MWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='variable_opex_change_nuclear'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Connection and use of system</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='0' data-var='connection_charge_gas'>
+              &pound;/kW-yr
+            </span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='0' data-var='connection_charge_nuclear'>
+              &pound;/kW-yr
+            </span>
+          </td>
+          <td class='control'>
+          </td>
+        </tr>
+        <tr>
+          <td>Insurance</td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='500' data-min='0' data-var='insurance_nuclear'>
+              &pound;/MW-yr
+            </span>
+          </td>
+          <td class='control'>
+          </td>
+        </tr>
+        <tr>
+          <td>Decomissioning</td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100000' data-min='0' data-var='decommissioning_nuclear'>
+              &pound;/kW
+            </span>
+          </td>
+          <td class='control'>
+          </td>
+        </tr>
+        <tr>
+          <td>Fuel</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='10' data-var='fuel_gas'>
+              &pound;/MWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='fuel_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='10' data-var='fuel_nuclear'>
+              &pound;/MWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='fuel_change_nuclear'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Carbon</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='500' data-min='0' data-var='carbon_gas'>
+              &pound;/tCO2
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_gas'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_nuclear'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Pre-development time</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='6' data-min='1' data-var='predev_time_gas'>
+              yr
+            </span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='6' data-min='1' data-var='predev_time_nuclear'>
+              yr
+            </span>
+          </td>
+          <td class='control'>
           </td>
         </tr>
         <tr>
@@ -171,66 +314,6 @@
           <td class='control'>
             <span class='TKLogarithmicAdjustableNumber' data-max='60' data-min='10' data-var='life_nuclear'>
               years
-            </span>
-          </td>
-          <td class='control'>
-          </td>
-        </tr>
-        <tr>
-          <td>Natural gas</td>
-          <td class='control'>
-            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='10' data-var='gas_gas'>
-              &pound;/MWh
-            </span>
-          </td>
-          <td class='control'>
-            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='gas_change_gas'></span>
-          </td>
-          <td class='control'>
-          </td>
-          <td class='control'>
-            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='gas_change_nuclear'></span>
-          </td>
-        </tr>
-        <tr>
-          <td>Carbon</td>
-          <td class='control'>
-            <span class='TKLogarithmicAdjustableNumber' data-max='500' data-min='0' data-var='carbon_gas'>
-              &pound;/tCO2
-            </span>
-          </td>
-          <td class='control'>
-            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_gas'></span>
-          </td>
-          <td class='control'>
-          </td>
-          <td class='control'>
-            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_nuclear'></span>
-          </td>
-        </tr>
-        <tr>
-          <td>Decomissioning</td>
-          <td class='control'>
-          </td>
-          <td class='control'>
-          </td>
-          <td class='control'>
-            <span class='TKLogarithmicAdjustableNumber' data-max='500' data-min='0' data-var='decommissioning_nuclear'>
-              &pound;/kW
-            </span>
-          </td>
-          <td class='control'>
-          </td>
-        </tr>
-        <tr>
-          <td>Insurance</td>
-          <td class='control'>
-          </td>
-          <td class='control'>
-          </td>
-          <td class='control'>
-            <span class='TKLogarithmicAdjustableNumber' data-max='500' data-min='0' data-var='insurance_nuclear'>
-              &pound;/MW-yr
             </span>
           </td>
           <td class='control'>
@@ -273,6 +356,48 @@
         </tr>
       </table>
     </div>
+    <h2>Data table</h2>
+    <h3>Costs that change over time</h3>
+    <table id='data'>
+      <thead>
+        <tr class='header'>
+          <th class='title'></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <h3>Components of the levelised cost of gas</h3>
+    <table id='gasData'>
+      <thead>
+        <tr class='header'>
+          <th class='label'>Parameter</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr class='total'>
+          <td class='title'>
+            Total
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+    <h3>Components of the levelised cost of nuclear</h3>
+    <table id='nuclearData'>
+      <thead>
+        <tr class='header'>
+          <th class='label'>Parameter</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr class='total'>
+          <td class='title'>
+            Total
+          </td>
+        </tr>
+      </tfoot>
+    </table>
     <h2>Notes</h2>
     <ul>
       <li>The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built</li>
@@ -290,7 +415,7 @@
   <!-- / Do the caclulations -->
   <script>
     (function() {
-      var end_year, expandArray, multiply, npv, start_year, t, tangle;
+      var end_year, expandArray, expandArrayIncremental, multiply, npv, start_year, t, tangle;
     
       expandArray = function(number, periods, change_per_period) {
         var i, result, _i, _ref;
@@ -306,6 +431,24 @@
         }
         for (i = _i = 1, _ref = periods - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
           result[i] = result[i - 1] * (1 + change_per_period);
+        }
+        return result;
+      };
+    
+      expandArrayIncremental = function(number, periods, change_per_period) {
+        var i, result, _i, _ref;
+        if (change_per_period == null) {
+          change_per_period = 0;
+        }
+        result = [number];
+        if (periods === 1) {
+          return result;
+        }
+        if (periods < 1) {
+          return [];
+        }
+        for (i = _i = 1, _ref = periods - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+          result[i] = result[i - 1] + change_per_period;
         }
         return result;
       };
@@ -347,23 +490,35 @@
           this.capex_nuclear = 4100;
           this.capex_change_gas = 0;
           this.capex_change_nuclear = 0;
+          this.predev_gas = 10;
+          this.predev_nuclear = 210;
+          this.predev_change_gas = 0;
+          this.predev_change_nuclear = 0;
           this.opex_nuclear = 72;
           this.opex_change_nuclear = 0;
           this.opex_gas = 22;
           this.opex_change_gas = 0;
+          this.fuel_gas = 20;
+          this.fuel_change_gas = 0;
+          this.fuel_nuclear = 5;
+          this.fuel_change_nuclear = 0;
           this.life_nuclear = 60;
           this.life_gas = 25;
           this.wacc_gas = 0.075;
           this.wacc_nuclear = 0.095;
-          this.construction_time_gas = 1;
-          this.construction_time_nuclear = 7;
-          this.gas_gas = 20;
-          this.gas_change_gas = 0;
+          this.predev_time_gas = 2;
+          this.predev_time_nuclear = 5;
+          this.construction_time_gas = 3;
+          this.construction_time_nuclear = 6;
+          this.connection_charge_gas = 9;
+          this.connection_charge_nuclear = 7;
+          this.variable_opex_gas = 0.1;
+          this.variable_opex_nuclear = 3;
           this.carbon_gas = 12;
           this.carbon_change_gas = 0;
           this.efficiency_gas = 0.55;
           this.emissions_intensity_gas = 380;
-          this.decommissioning_nuclear = 0;
+          this.decommissioning_nuclear = 43500;
           this.insurance_nuclear = 10;
           this.load_factor = 0.93;
           this.levelised_cost_gas = [];
@@ -382,9 +537,9 @@
           xAxis = d3.svg.axis().scale(xScale).orient("bottom").tickFormat(d3.format("0.f"));
           yAxis = d3.svg.axis().scale(yScale).orient("left");
           this.line = d3.svg.line().x(function(d, i) {
-            return xScale(start_year + i);
+            return xScale(start_year + d.year.project_start);
           }).y(function(d, i) {
-            return yScale(+d);
+            return yScale(+d.total);
           });
           chart = d3.select("#levelised_cost_chart").append("svg").append("g").attr('class', 'drawing').attr("transform", "translate(" + margin.left + "," + margin.top + ")");
           chart.append("path").attr('class', 'line gas');
@@ -397,9 +552,9 @@
           return chart.append("text").attr('class', 'nuclear label').attr("transform", "translate(" + (xScale.range()[1]) + ",0)").text("Nuclear");
         },
         update: function() {
-          var capex, capex_cost, carbon_cost, carbon_emitted, chart, construction_start, construction_time, decomissioning_cost, decommissioning, e, efficiency, electricity_produced, emissions_intensity, f, fuel_cost, fuel_used, gas_cost, insurance, insurance_cost, levelise, life, load_factor, npv_electricity_produced, operation_end, operation_start, opex, opex_cost, p, time_horizon, wacc, _i, _j, _len, _ref, _ref1;
+          var annual_data, capex, capex_cost, carbon_cost, carbon_emitted, chart, connection, connection_cost, construction_start, construction_time, cost_of_fuel, costs, data_format, decomissioning_cost, decommissioning, e, efficiency, electricity_produced, emissions_intensity, f, fuel_cost, fuel_used, insurance, insurance_cost, levelise, life, load_factor, npv_electricity_produced, operation_end, operation_start, opex, opex_cost, p, predev, predev_cost, predev_time, series, table, time_horizon, time_series, update_component_table, v, variable_cost, variable_opex, wacc, years, _i, _j, _k, _len, _len1, _ref, _ref1, _ref2, _ref3, _ref4;
           time_horizon = end_year - start_year + Math.max(this.life_nuclear, this.life_gas);
-          _ref = ['capex', 'opex', 'gas', 'carbon'];
+          _ref = ['capex', 'opex', 'fuel', 'carbon', 'predev'];
           for (_i = 0, _len = _ref.length; _i < _len; _i++) {
             p = _ref[_i];
             if (this[p + "_gas"] != null) {
@@ -412,16 +567,20 @@
           for (construction_start = _j = 0, _ref1 = end_year - start_year; 0 <= _ref1 ? _j <= _ref1 : _j >= _ref1; construction_start = 0 <= _ref1 ? ++_j : --_j) {
             life = this.life_gas;
             construction_time = this.construction_time_gas;
-            operation_start = construction_start + construction_time;
+            predev_time = this.predev_time_gas;
+            operation_start = construction_start + predev_time + construction_time;
             operation_end = operation_start + life;
             load_factor = this.load_factor;
             efficiency = this.efficiency_gas;
             emissions_intensity = this.emissions_intensity_gas;
-            gas_cost = this.gas_over_time_gas.slice(operation_start, operation_end);
+            cost_of_fuel = this.fuel_over_time_gas.slice(operation_start, operation_end);
             carbon_cost = this.carbon_over_time_gas.slice(operation_start, operation_end);
             capex = this.capex_over_time_gas[construction_start];
+            predev = this.predev_over_time_gas[construction_start];
             opex = this.opex_over_time_gas[construction_start];
+            variable_opex = this.variable_opex_gas;
             wacc = this.wacc_gas;
+            connection = this.connection_charge_gas;
             electricity_produced = expandArray(load_factor * 365.25 * 24 / 1000, life);
             fuel_used = (function() {
               var _k, _len1, _results;
@@ -441,41 +600,173 @@
               }
               return _results;
             })();
-            fuel_cost = multiply(gas_cost, fuel_used);
+            fuel_cost = multiply(cost_of_fuel, fuel_used);
             carbon_cost = multiply(carbon_cost, carbon_emitted);
+            predev_cost = expandArray(predev / predev_time, predev_time);
             capex_cost = expandArray(capex / construction_time, construction_time);
             opex_cost = expandArray(opex, life);
-            npv_electricity_produced = npv(electricity_produced, wacc, construction_time);
+            variable_cost = multiply(expandArray(variable_opex, life), electricity_produced);
+            connection_cost = expandArray(connection, life);
+            npv_electricity_produced = npv(electricity_produced, wacc, predev_time + construction_time);
             levelise = function(array, offset) {
               if (offset == null) {
                 offset = 0;
               }
               return npv(array, wacc, offset) / npv_electricity_produced;
             };
-            this.levelised_cost_gas[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(fuel_cost, construction_time) + levelise(carbon_cost, construction_time);
+            costs = {
+              year: {
+                project_start: construction_start,
+                operate: operation_start
+              },
+              components: {
+                predev: levelise(predev_cost, 0),
+                capex: levelise(capex_cost, predev_time),
+                opex: levelise(opex_cost, predev_time + construction_time),
+                variable_opex: levelise(variable_cost, predev_time + construction_time),
+                connection: levelise(connection_cost, predev_time + construction_time),
+                fuel: levelise(fuel_cost, predev_time + construction_time),
+                carbon: levelise(carbon_cost, predev_time + construction_time)
+              },
+              total: 0
+            };
+            _ref2 = costs.components;
+            for (p in _ref2) {
+              v = _ref2[p];
+              costs.total = costs.total + v;
+            }
+            this.levelised_cost_gas[construction_start] = costs;
             load_factor = this.load_factor;
             construction_time = this.construction_time_nuclear;
+            predev_time = this.predev_time_nuclear;
             life = this.life_nuclear;
-            operation_start = construction_start + construction_time;
+            operation_start = construction_start + predev_time + construction_time;
             operation_end = operation_start + life;
             decommissioning = this.decommissioning_nuclear;
             insurance = this.insurance_nuclear;
             capex = this.capex_over_time_nuclear[construction_start];
             opex = this.opex_over_time_nuclear[construction_start];
+            variable_opex = this.variable_opex_nuclear;
+            cost_of_fuel = this.fuel_over_time_nuclear.slice(operation_start, operation_end);
+            predev = this.predev_over_time_nuclear[construction_start];
+            connection = this.connection_charge_nuclear;
             wacc = this.wacc_nuclear;
             electricity_produced = expandArray(load_factor * 365.25 * 24 / 1000, life);
             capex_cost = expandArray(capex / construction_time, construction_time);
             decomissioning_cost = [decommissioning];
+            predev_cost = expandArray(predev / predev_time, predev_time);
             opex_cost = expandArray(opex, life);
+            variable_cost = multiply(expandArray(variable_opex, life), electricity_produced);
             insurance_cost = expandArray(insurance, life);
-            npv_electricity_produced = npv(electricity_produced, wacc, construction_time);
-            this.levelised_cost_nuclear[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(insurance_cost, construction_time) + levelise(decomissioning_cost, construction_time + life);
+            connection_cost = expandArray(connection, life);
+            fuel_cost = multiply(cost_of_fuel, electricity_produced);
+            npv_electricity_produced = npv(electricity_produced, wacc, predev_time + construction_time);
+            costs = {
+              year: {
+                project_start: construction_start,
+                operate: operation_start
+              },
+              components: {
+                predev: levelise(predev_cost, 0),
+                capex: levelise(capex_cost, predev_time),
+                opex: levelise(opex_cost, predev_time + construction_time),
+                variable_opex: levelise(variable_cost, predev_time + construction_time),
+                fuel: levelise(fuel_cost, predev_time + construction_time),
+                connection: levelise(connection_cost, predev_time + construction_time),
+                insurance: levelise(insurance_cost, predev_time + construction_time),
+                decommissioning: levelise(decomissioning_cost, predev_time + construction_time + life)
+              },
+              total: 0
+            };
+            _ref3 = costs.components;
+            for (p in _ref3) {
+              v = _ref3[p];
+              costs.total = costs.total + v;
+            }
+            this.levelised_cost_nuclear[construction_start] = costs;
           }
           chart = d3.select("#levelised_cost_chart .drawing");
           chart.select("path.gas").transition().attr("d", this.line(this.levelised_cost_gas));
           chart.select("path.nuclear").transition().attr("d", this.line(this.levelised_cost_nuclear));
-          chart.select("text.gas").transition().attr("transform", "translate(" + (this.xScale.range()[1]) + "," + this.yScale(this.levelised_cost_gas[this.levelised_cost_gas.length - 1]) + ")");
-          return chart.select("text.nuclear").transition().attr("transform", "translate(" + (this.xScale.range()[1]) + "," + this.yScale(this.levelised_cost_nuclear[this.levelised_cost_nuclear.length - 1]) + ")");
+          chart.select("text.gas").transition().attr("transform", "translate(" + (this.xScale.range()[1]) + "," + this.yScale(this.levelised_cost_gas[this.levelised_cost_gas.length - 1].total) + ")");
+          chart.select("text.nuclear").transition().attr("transform", "translate(" + (this.xScale.range()[1]) + "," + this.yScale(this.levelised_cost_nuclear[this.levelised_cost_nuclear.length - 1].total) + ")");
+          table = d3.select("table#data");
+          years = table.selectAll("th.year").data(["Parameter"].concat(expandArrayIncremental(start_year, time_horizon, 1)));
+          years.enter().append("th").attr('class', 'year');
+          years.exit().remove();
+          years.text(function(d) {
+            return d;
+          });
+          time_series = (function() {
+            var _k, _len1, _ref4, _results;
+            _ref4 = ['capex', 'opex', 'fuel', 'carbon'];
+            _results = [];
+            for (_k = 0, _len1 = _ref4.length; _k < _len1; _k++) {
+              p = _ref4[_k];
+              _results.push({
+                name: p + " over time gas",
+                values: this[p + "_over_time_gas"]
+              });
+            }
+            return _results;
+          }).call(this);
+          _ref4 = ['capex', 'opex', 'fuel'];
+          for (_k = 0, _len1 = _ref4.length; _k < _len1; _k++) {
+            p = _ref4[_k];
+            time_series.push({
+              name: p + " over time nuclear",
+              values: this[p + "_over_time_nuclear"]
+            });
+          }
+          series = table.selectAll("tr.series").data(time_series);
+          series.enter().append("tr").attr('class', 'series').append("td").attr("class", "label").text(function(d) {
+            return d.name;
+          });
+          series.exit().remove();
+          data_format = d3.format("0f");
+          annual_data = series.selectAll("td.data").data(function(d) {
+            return d.values;
+          });
+          annual_data.enter().append("td").attr('class', 'data');
+          annual_data.text(function(d) {
+            return data_format(d);
+          });
+          annual_data.exit().remove();
+          update_component_table = function(table_id, lc) {
+            var totals;
+            table = d3.select(table_id);
+            years = table.select("tr.header").selectAll("th.year").data(expandArrayIncremental(start_year, end_year - start_year + 1, 1));
+            years.enter().append("th").attr('class', 'year');
+            years.exit().remove();
+            years.text(function(d) {
+              return d;
+            });
+            series = table.select("tbody").selectAll("tr.components").data(d3.map(lc[0].components).keys());
+            series.enter().append("tr").attr('class', 'components').append("td").attr("class", "label").text(function(d) {
+              return d;
+            });
+            series.exit().remove();
+            annual_data = series.selectAll("td.data").data(function(d) {
+              return lc.map(function(e) {
+                return e.components[d];
+              });
+            });
+            annual_data.enter().append("td").attr('class', 'data');
+            annual_data.text(function(d) {
+              return data_format(d);
+            });
+            annual_data.exit().remove();
+            totals = table.select("tfoot tr").selectAll("td.data").data(lc.map(function(e) {
+              return e.total;
+            }));
+            totals.enter().append("td").attr('class', 'data');
+            totals.text(function(d) {
+              return data_format(d);
+            });
+            return totals.exit().remove();
+          };
+          update_component_table('table#gasData', this.levelised_cost_gas);
+          return update_component_table('table#nuclearData', this.levelised_cost_nuclear);
         }
       };
     

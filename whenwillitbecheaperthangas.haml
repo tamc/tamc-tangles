@@ -81,6 +81,14 @@
       dominant-baseline: middle;
     }
 
+    tr.series td.label {
+      width: 150px;
+    }
+
+    td.data {
+      text-align: right;
+    }
+
   // Draw the interface
   %body
     %h1 When could nuclear-electricity be cheaper than gas-electricity?
@@ -105,14 +113,18 @@
         - technologies = %w{ gas nuclear }
         :ruby
           parameters = [
+            ['Pre-development cost', 'predev', '&pound;/kW',  0, 5000, true, %w{gas nuclear}],
             ['Capital cost', 'capex', '&pound;/kW',  100, 5000, true, %w{gas nuclear}],
-            ['Operating cost', 'opex', '&pound;/kW-yr',  1, 50, true, %w{gas nuclear}],
-            ['Construction time', 'construction_time', 'yr',  1, 15, true, %w{gas nuclear}],
-            ['Plant life', 'life', 'years',  10, 60, false, %w{gas nuclear}],
-            ['Natural gas', 'gas', '&pound;/MWh',  10, 100, true, %w{gas}],
+            ['Fixed operating cost', 'opex', '&pound;/kW-yr',  1, 50, true, %w{gas nuclear}],
+            ['Variable operating cost', 'variable_opex', '&pound;/MWh',  0, 10, true, %w{gas nuclear}],
+            ['Connection and use of system', 'connection_charge', '&pound;/kW-yr',  0, 100, false, %w{gas nuclear}],
+            ['Insurance', 'insurance', '&pound;/MW-yr',  0, 500, false, %w{nuclear}],
+            ['Decomissioning', 'decommissioning', '&pound;/kW',  0, 100000, false, %w{nuclear}],
+            ['Fuel', 'fuel', '&pound;/MWh',  10, 100, true, %w{gas nuclear}],
             ['Carbon', 'carbon', '&pound;/tCO2',  0, 500, true, %w{gas}],
-            ['Decomissioning', 'decommissioning', '&pound;/kW',  0, 500, false, %w{nuclear}],
-            ['Insurance', 'insurance', '&pound;/MW-yr',  0, 500, false, %w{nuclear}]
+            ['Pre-development time', 'predev_time', 'yr',  1, 6, false, %w{gas nuclear}],
+            ['Construction time', 'construction_time', 'yr',  1, 15, true, %w{gas nuclear}],
+            ['Plant life', 'life', 'years',  10, 60, false, %w{gas nuclear}]
           ]
         - parameters.each do |p|
           %tr
@@ -150,6 +162,37 @@
           %td &nbsp;
           %td.control &nbsp;
 
+    %h2 Data table
+
+    %h3 Costs that change over time
+    %table#data
+      %thead
+        %tr.header
+          %th.title
+      %tbody
+
+    %h3 Components of the levelised cost of gas
+    %table#gasData
+      %thead
+        %tr.header
+          %th.label Parameter
+      %tbody
+      %tfoot
+        %tr.total
+          %td.title
+            Total
+
+    %h3 Components of the levelised cost of nuclear
+    %table#nuclearData
+      %thead
+        %tr.header
+          %th.label Parameter
+      %tbody
+      %tfoot
+        %tr.total
+          %td.title
+            Total
+
     %h2 Notes
 
     %ul
@@ -177,6 +220,18 @@
       return [] if periods < 1
       for i in [1..(periods-1)]
         result[i] = result[i-1] * (1+change_per_period)
+      result
+
+    # This takes a first number, a number of periods and a number to add to that first
+    # number each period. It returns an array.
+    #
+    # e.g., expandArrayIncremental(10, 5, 2) # =  [10, 12, 14, 16, 18] 
+    expandArrayIncremental = (number, periods, change_per_period = 0) ->
+      result = [number]
+      return result if periods == 1
+      return [] if periods < 1
+      for i in [1..(periods-1)]
+        result[i] = result[i-1] + change_per_period
       result
 
     # This calculates the net present value of the content of the first argument
@@ -210,29 +265,49 @@
         @capex_change_gas = 0
         @capex_change_nuclear = 0
 
+        @predev_gas = 10 # £/kW
+        @predev_nuclear = 210 # £/kW
+        @predev_change_gas = 0
+        @predev_change_nuclear = 0
+
         @opex_nuclear = 72 # £/kW/yr
         @opex_change_nuclear = 0
         @opex_gas = 22
         @opex_change_gas = 0
 
+        @fuel_gas = 20 # £/MWh
+        @fuel_change_gas = 0
+        @fuel_nuclear = 5 # £/MWh
+        @fuel_change_nuclear = 0
+
         # Things that are common to both technologies but don't change
         @life_nuclear = 60
         @life_gas = 25
+
         @wacc_gas = 0.075
         @wacc_nuclear = 0.095
-        @construction_time_gas = 1 # years
-        @construction_time_nuclear = 7 # years
+
+        @predev_time_gas = 2 # years
+        @predev_time_nuclear = 5 # years
+
+        @construction_time_gas = 3 # years
+        @construction_time_nuclear = 6 # years
+
+        @connection_charge_gas = 9 # £/kW/yr
+        @connection_charge_nuclear = 7 # £/kW/yr
+
+        @variable_opex_gas = 0.1 # £/MWh
+        @variable_opex_nuclear = 3 # £/MWh
 
         # Things that are only relevant to gas
-        @gas_gas = 20 # £/MWh
-        @gas_change_gas = 0
         @carbon_gas = 12 # £/tCO2e
         @carbon_change_gas = 0
+
         @efficiency_gas = 0.55
         @emissions_intensity_gas= 380 # gCO2/kWh
 
         # Things that are only relevant to nuclear
-        @decommissioning_nuclear = 0 # £/kW
+        @decommissioning_nuclear = 43500 # £/kW # This is what it would need to be to work out as £2/MWh
         @insurance_nuclear = 10 # £/kW/yr
 
         # Things that should be identical for both
@@ -271,8 +346,8 @@
         yAxis = d3.svg.axis().scale(yScale).orient("left")
 
         @line = d3.svg.line()
-          .x((d,i) -> xScale(start_year+i))
-          .y((d,i) -> yScale(+d))
+          .x((d,i) -> xScale(start_year+d.year.project_start))
+          .y((d,i) -> yScale(+d.total))
 
         chart = d3.select("#levelised_cost_chart")
                   .append("svg")
@@ -316,12 +391,11 @@
           .attr("transform", "translate(" + (xScale.range()[1]) + ",0)")
           .text("Nuclear")
 
-
       update: () ->
 
         time_horizon = end_year - start_year + Math.max(@life_nuclear, @life_gas)
         
-        for p in ['capex', 'opex', 'gas', 'carbon']
+        for p in ['capex', 'opex', 'fuel', 'carbon', 'predev']
           @[p+"_over_time_gas"] = expandArray(@[p+"_gas"], time_horizon, @[p+"_change_gas"]) if @[p+"_gas"]?
           @[p+"_over_time_nuclear"] = expandArray(@[p+"_nuclear"], time_horizon, @[p+"_change_nuclear"]) if @[p+"_nuclear"]?
 
@@ -329,38 +403,63 @@
           # Work out the answer for gas
           life = @life_gas
           construction_time = @construction_time_gas
-          operation_start = construction_start + construction_time
+          predev_time = @predev_time_gas
+          operation_start = construction_start + predev_time + construction_time
           operation_end = operation_start + life
 
           load_factor = @load_factor
           efficiency = @efficiency_gas
           emissions_intensity = @emissions_intensity_gas
-          gas_cost = @gas_over_time_gas.slice(operation_start, operation_end)
+          cost_of_fuel = @fuel_over_time_gas.slice(operation_start, operation_end)
           carbon_cost = (@carbon_over_time_gas.slice(operation_start, operation_end))
           capex = @capex_over_time_gas[construction_start]
+          predev = @predev_over_time_gas[construction_start]
           opex = @opex_over_time_gas[construction_start]
+          variable_opex = @variable_opex_gas
           wacc = @wacc_gas
+          connection = @connection_charge_gas
 
           electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
           fuel_used = ((e/efficiency) for e in electricity_produced) # MWh
           carbon_emitted = ((f*emissions_intensity/1000) for f in fuel_used) # tCO2
-          fuel_cost = multiply(gas_cost, fuel_used) # £
+          fuel_cost = multiply(cost_of_fuel, fuel_used) # £
           carbon_cost = multiply(carbon_cost, carbon_emitted) # £
+          predev_cost = expandArray(predev/predev_time, predev_time) # £
           capex_cost = expandArray(capex/construction_time, construction_time)
           opex_cost = expandArray(opex, life) # £
+          variable_cost = multiply(expandArray(variable_opex, life), electricity_produced)
+          connection_cost = expandArray(connection, life) # £
 
-          npv_electricity_produced = npv(electricity_produced, wacc, construction_time)
+          npv_electricity_produced = npv(electricity_produced, wacc, predev_time + construction_time)
 
           levelise = (array, offset = 0) ->
             npv(array, wacc, offset) / npv_electricity_produced
 
-          @levelised_cost_gas[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(fuel_cost, construction_time) + levelise(carbon_cost, construction_time)
+          costs =
+            year:
+              project_start: construction_start
+              operate: operation_start
+            components:
+              predev: levelise(predev_cost, 0)
+              capex: levelise(capex_cost, predev_time)
+              opex: levelise(opex_cost, predev_time + construction_time)
+              variable_opex: levelise(variable_cost, predev_time + construction_time)
+              connection: levelise(connection_cost, predev_time + construction_time)
+              fuel: levelise(fuel_cost, predev_time + construction_time)
+              carbon: levelise(carbon_cost, predev_time + construction_time)
+            total: 0
+
+          for p, v of costs.components
+            costs.total = costs.total + v
+
+          @levelised_cost_gas[construction_start] = costs
 
           # Work out the answer for nuclear
           load_factor = @load_factor
           construction_time = @construction_time_nuclear
+          predev_time = @predev_time_nuclear
           life = @life_nuclear
-          operation_start = construction_start + construction_time
+          operation_start = construction_start + predev_time + construction_time
           operation_end = operation_start + life
 
           decommissioning = @decommissioning_nuclear
@@ -368,17 +467,43 @@
 
           capex = @capex_over_time_nuclear[construction_start]
           opex = @opex_over_time_nuclear[construction_start]
+          variable_opex = @variable_opex_nuclear
+          cost_of_fuel = @fuel_over_time_nuclear.slice(operation_start, operation_end)
+          predev = @predev_over_time_nuclear[construction_start]
+          connection = @connection_charge_nuclear
           wacc = @wacc_nuclear
 
           electricity_produced = expandArray(load_factor*365.25*24/1000, life) # MWh
           capex_cost = expandArray(capex/construction_time, construction_time)
           decomissioning_cost = [decommissioning] # £
+          predev_cost = expandArray(predev/predev_time, predev_time) # £
           opex_cost = expandArray(opex, life) # £
+          variable_cost = multiply(expandArray(variable_opex, life), electricity_produced)
           insurance_cost = expandArray(insurance, life) # £
+          connection_cost = expandArray(connection, life) # £
+          fuel_cost = multiply(cost_of_fuel, electricity_produced) # £
 
-          npv_electricity_produced = npv(electricity_produced, wacc, construction_time)
+          npv_electricity_produced = npv(electricity_produced, wacc, predev_time + construction_time)
 
-          @levelised_cost_nuclear[construction_start] = levelise(capex_cost, 0) + levelise(opex_cost, construction_time) + levelise(insurance_cost, construction_time) + levelise(decomissioning_cost, construction_time + life)
+          costs =
+            year:
+              project_start: construction_start
+              operate: operation_start
+            components:
+              predev: levelise(predev_cost, 0)
+              capex: levelise(capex_cost, predev_time)
+              opex: levelise(opex_cost, predev_time + construction_time)
+              variable_opex: levelise(variable_cost, predev_time + construction_time)
+              fuel: levelise(fuel_cost, predev_time + construction_time)
+              connection: levelise(connection_cost, predev_time + construction_time)
+              insurance: levelise(insurance_cost, predev_time + construction_time)
+              decommissioning: levelise(decomissioning_cost, predev_time + construction_time + life)
+            total: 0
+
+          for p, v of costs.components
+            costs.total = costs.total + v
+
+          @levelised_cost_nuclear[construction_start] = costs
 
         chart = d3.select("#levelised_cost_chart .drawing")
 
@@ -392,10 +517,103 @@
 
         chart.select("text.gas")
           .transition()
-          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_gas[@levelised_cost_gas.length-1])+")")
+          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_gas[@levelised_cost_gas.length-1].total)+")")
 
         chart.select("text.nuclear")
           .transition()
-          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_nuclear[@levelised_cost_nuclear.length-1])+")")
+          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_nuclear[@levelised_cost_nuclear.length-1].total)+")")
+
+        table = d3.select("table#data")
+
+        years = table.selectAll("th.year")
+          .data(["Parameter"].concat(expandArrayIncremental(start_year, time_horizon, 1)))
+
+        years.enter().append("th")
+          .attr('class','year')
+
+        years.exit().remove()
+
+        years.text((d) -> d)
+
+        time_series = for p in ['capex', 'opex', 'fuel', 'carbon']
+          {name: p+" over time gas", values: @[p+"_over_time_gas"]}
+
+        for p in ['capex', 'opex', 'fuel']
+          time_series.push({name: p+" over time nuclear", values: @[p+"_over_time_nuclear"]})
+
+        series = table.selectAll("tr.series")
+          .data(time_series)
+
+        series.enter().append("tr")
+          .attr('class', 'series')
+          .append("td")
+            .attr("class", "label")
+            .text((d) -> d.name)
+
+        series.exit().remove()
+
+        data_format = d3.format("0f")
+
+        annual_data = series.selectAll("td.data")
+          .data((d) -> d.values)
+
+        annual_data.enter().append("td")
+          .attr('class', 'data')
+
+        annual_data
+          .text((d) -> data_format(d))
+
+        annual_data.exit().remove()
+        
+        update_component_table = (table_id, lc) ->
+          table = d3.select(table_id)
+
+          years = table.select("tr.header").selectAll("th.year")
+            .data(expandArrayIncremental(start_year, end_year - start_year + 1, 1))
+
+          years.enter().append("th")
+            .attr('class','year')
+
+          years.exit().remove()
+
+          years.text((d) -> d)
+
+          series = table.select("tbody").selectAll("tr.components")
+            .data(d3.map(lc[0].components).keys())
+
+          series.enter().append("tr")
+            .attr('class', 'components')
+            .append("td")
+              .attr("class", "label")
+              .text((d) -> d)
+
+          series.exit().remove()
+
+
+          annual_data = series.selectAll("td.data")
+            .data((d) -> lc.map( (e) -> e.components[d] ))
+
+          annual_data.enter().append("td")
+            .attr('class', 'data')
+
+          annual_data
+            .text((d) -> data_format(d))
+
+          annual_data.exit().remove()
+
+          totals = table.select("tfoot tr").selectAll("td.data")
+            .data(lc.map( (e) -> e.total))
+
+          totals.enter().append("td")
+            .attr('class', 'data')
+
+          totals
+            .text((d) -> data_format(d))
+
+          totals.exit().remove()
+
+        update_component_table('table#gasData', @levelised_cost_gas)
+        update_component_table('table#nuclearData', @levelised_cost_nuclear)
+
 
     t = new Tangle(document.getElementById("tangle"), tangle)
