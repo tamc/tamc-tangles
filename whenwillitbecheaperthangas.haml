@@ -41,6 +41,7 @@
       margin: 5px;
       width: 100%;
       text-align: center;
+      margin-bottom: 30px;
     }
     #levelised_cost_chart {
       float: right;
@@ -93,8 +94,11 @@
   %body
     %h1 When could nuclear-electricity be cheaper than gas-electricity?
 
-    %div#warning Work in progress
-
+    %div#warning 
+      This is based on public data reported in DECC's Electricity Generation Costs 2013. It doesn't give exactly the same levelised costs as reported in that publication
+      %a{href:'#footnoteWhyDECCsNumbersAreDifferent'}
+        %sup 1
+    
     #levelised_cost_chart
 
     #tangle
@@ -193,11 +197,18 @@
           %td.title
             Total
 
-    %h2 Notes
+    %h2 Footnotes
 
-    %ul
-      %li The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built
-      %li Finance rates must be the net post tax effective rate
+    %ol
+      %li#footnoteWhyDECCsNumbersAreDifferent 
+        Reason's this will give different answers to DECC's official levelised cost estimates:
+        %ul
+          %li This model assumes a constant percentage growth in carbon and fuel costs. DECC probably assumes a more sophisticated shape.
+          %li This model assumes pre-development costs are spread equally over the pre-development period and capital costs are spread equally over the construction period. DECC probably assumes a more sophisticated allocation.
+      %li#footnoteOperatingCost The plant has the same operating cost for its entire life, but the operating cost varies depending on the year in which the plant is built
+      %li#footnoteFinanceCost Finance rates must be the net post tax effective rate
+
+
 
     #links
       The source code for this tangle is at 
@@ -300,8 +311,8 @@
         @variable_opex_nuclear = 3 # £/MWh
 
         # Things that are only relevant to gas
-        @carbon_gas = 12 # £/tCO2e
-        @carbon_change_gas = 0
+        @carbon_gas = 21 # £/tCO2e 2015 Carbon Price Floor
+        @carbon_change_gas = 0.08
 
         @efficiency_gas = 0.55
         @emissions_intensity_gas= 380 # gCO2/kWh
@@ -374,7 +385,7 @@
         chart.append("text")
           .attr('class', 'xaxislabel')
           .attr("transform", "translate("+((xScale.range()[0]+xScale.range()[1])/2.0)+","+(yScale.range()[0]+35)+")")
-          .text("Year in which construction starts")
+          .text("Year in which project starts")
 
         chart.append("text")
           .attr('class', 'yaxislabel')
