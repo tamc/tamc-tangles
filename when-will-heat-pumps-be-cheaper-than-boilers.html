@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html>
+  <meta content='IE=edge' http-equiv='X-UA-Compatible'>
+  <meta charset='UTF-8'>
+  <!-- / Load all the javascript ansd stylesheet dependencies -->
+  <script src='Tangle.js' type='text/javascript'></script>
+  <script src='TangleKit/mootools.js' type='text/javascript'></script>
+  <script src='TangleKit/sprintf.js' type='text/javascript'></script>
+  <script src='TangleKit/BVTouchable.js' type='text/javascript'></script>
+  <script src='TangleKit/TangleKit.js' type='text/javascript'></script>
+  <script src='TangleKit/TKLogarithmicAdjustableNumber.js' type='text/javascript'></script>
+  <script src='d3.min.js' type='text/javascript'></script>
+  <title>When might heat pumps be cheaper than gas boilers?</title>
+  <!-- / Prepare the CSS -->
+  <link href='TangleKit/TangleKit.css' rel='stylesheet' type='text/css'>
+  <style>
+    body {
+      padding: 2% 5%;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    span[data-var] {
+      background-color: #FFFDCC;
+    }
+    span[data-var].TKAdjustableNumber, span[data-var].TKLogarithmicAdjustableNumber {
+      background-color: #fff;
+    }
+    span.result {
+      font-weight: bold;
+    }
+    td.control {
+      text-align: right;
+      width: 150px;
+    }
+    div#warning {
+      background: yellow;
+      border: solid 1px black;
+      padding: 5px;
+      margin: 5px;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    #levelised_cost_chart {
+      float: right;
+      width: 400px;
+      height: 400px;
+      margin: 0;
+      padding: 0;
+    }
+    #levelised_cost_chart svg {
+      width: 400px;
+      height: 400px;
+    }
+    .axis path, .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+    
+    .yaxislabel {
+      text-anchor: end;
+    }
+    
+    .xaxislabel {
+      text-anchor: middle;
+    }
+    
+    .line {
+      fill: none;
+      stroke: black;
+      stroke-width: 3px;
+    }
+    
+    .gas {
+      stroke: green;
+    }
+    
+    .heatpump {
+      stroke: blue;
+    }
+    
+    text.label {
+      dominant-baseline: middle;
+    }
+    
+    tr.series td.label {
+      width: 150px;
+    }
+    
+    td.data {
+      text-align: right;
+    }
+  </style>
+  <!-- / Draw the interface -->
+  <body>
+    <h1>When could heat pumps be cheaper than gas boilers?</h1>
+    <div id='warning'>
+      Using data made up by Tom Counsell, not government data. Not Quality Assured so may have bugs.
+    </div>
+    <div id='levelised_cost_chart'></div>
+    <div id='tangle'>
+      <table>
+        <tr>
+          <th></th>
+          <th colspan='2'>Gas boilers</th>
+          <th colspan='2'>Heat pumps</th>
+          <th colspan='2'>Common across both</th>
+        </tr>
+        <tr>
+          <th>Setting</th>
+          <th>Today</th>
+          <th>Annual change</th>
+          <th>Today</th>
+          <th>Annual change</th>
+          <th>Today</th>
+          <th>Annual change</th>
+        </tr>
+        <tr>
+          <td>Load factor</td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='load_factor_change_gas'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='load_factor_change_heatpump'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='1' data-min='0' data-step='0.01' data-var='load_factor_common'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='load_factor_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Cost of carbon</td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_gas'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_heatpump'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='500' data-min='0' data-var='carbon_common'>
+              &pound;/tCO2
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='carbon_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Capital cost</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='5000' data-min='0' data-var='capex_gas'>
+              &pound;/kW
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='capex_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='5000' data-min='0' data-var='capex_heatpump'>
+              &pound;/kW
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='capex_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='capex_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Operating cost</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='50' data-min='1' data-var='opex_gas'>
+              &pound;/kW-yr
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='opex_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='50' data-min='1' data-var='opex_heatpump'>
+              &pound;/kW-yr
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='opex_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='opex_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Efficiency</td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='5' data-min='0' data-step='0.01' data-var='efficiency_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='efficiency_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='5' data-min='0' data-step='0.01' data-var='efficiency_heatpump'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='efficiency_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='efficiency_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Cost of gas</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='0' data-var='fuel_gas'>
+              p/kWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='fuel_change_gas'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='fuel_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='fuel_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Cost of electricity</td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='electricity_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='100' data-min='0' data-var='electricity_heatpump'>
+              p/kWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='electricity_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='electricity_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Carbon intensity of electricity</td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='emissions_intensity_electricity_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='1000' data-min='0' data-var='emissions_intensity_electricity_heatpump'>
+              gCO<sub>2</sub>/kWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='emissions_intensity_electricity_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='emissions_intensity_electricity_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Carbon intensity of gas</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='3000' data-min='0' data-var='emissions_intensity_gas'>
+              gCO<sub>2</sub>/kWh
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='emissions_intensity_change_gas'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='emissions_intensity_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='emissions_intensity_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>Lifespan</td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='20' data-min='5' data-var='life_gas'>
+              years
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='life_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKLogarithmicAdjustableNumber' data-max='20' data-min='5' data-var='life_heatpump'>
+              years
+            </span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='life_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='life_change_common'></span>
+          </td>
+        </tr>
+        <tr>
+          <td>WACC</td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='0' data-step='0.01' data-var='wacc_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='wacc_change_gas'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='0' data-step='0.01' data-var='wacc_heatpump'></span>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='wacc_change_heatpump'></span>
+          </td>
+          <td class='control'>
+          </td>
+          <td class='control'>
+            <span class='TKAdjustableNumber' data-format='percent' data-max='0.2' data-min='-0.2' data-step='0.01' data-var='wacc_change_common'></span>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <h2>Data table</h2>
+    <h3>Costs that change over time</h3>
+    <table id='data'>
+      <thead>
+        <tr class='header'>
+          <th class='title'></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <h3>Components of the levelised cost of gas boilers</h3>
+    <table id='gasData'>
+      <thead>
+        <tr class='header'>
+          <th class='label'>Parameter</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr class='total'>
+          <td class='title'>
+            Total
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+    <h3>Components of the levelised cost of heat pumps</h3>
+    <table id='heatpumpData'>
+      <thead>
+        <tr class='header'>
+          <th class='label'>Parameter</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr class='total'>
+          <td class='title'>
+            Total
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+    <h2>Footnotes</h2>
+    <ol>
+      <li id='footnoteWhyDECCsNumbersAreDifferent'></li>
+    </ol>
+    <div id='links'>
+      The source code for this tangle is at
+      <a href='https://github.com/tamc/tamc-tangles/blob/gh-pages/when-will-heat-pumps-be-cheaper-thank-boilers.haml'>https://github.com/tamc/tamc-tangles/blob/gh-pages/when-will-heat-pumps-be-cheaper-thank-boilers.haml</a>
+      is &copy; Tom Counsell and is licenced under the open-source
+      <a href='http://opensource.org/licenses/MIT'>MIT</a>
+      license. Please suggest fixes and report bugs at
+      <a href='http://github.com/tamc/tamc-tangles'>http://github.com/tamc/tamc-tangles</a>
+    </div>
+  </body>
+  <!-- / Do the caclulations -->
+  <script>
+    (function() {
+      var divide, end_year, expandArray, expandArrayIncremental, multiply, npv, start_year, t, tangle;
+    
+      expandArray = function(number, periods, change_per_period) {
+        var i, result, _i, _ref;
+        if (change_per_period == null) {
+          change_per_period = 0;
+        }
+        result = [number];
+        if (periods === 1) {
+          return result;
+        }
+        if (periods < 1) {
+          return [];
+        }
+        for (i = _i = 1, _ref = periods - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+          result[i] = result[i - 1] * (1 + change_per_period);
+        }
+        return result;
+      };
+    
+      expandArrayIncremental = function(number, periods, change_per_period) {
+        var i, result, _i, _ref;
+        if (change_per_period == null) {
+          change_per_period = 0;
+        }
+        result = [number];
+        if (periods === 1) {
+          return result;
+        }
+        if (periods < 1) {
+          return [];
+        }
+        for (i = _i = 1, _ref = periods - 1; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+          result[i] = result[i - 1] + change_per_period;
+        }
+        return result;
+      };
+    
+      npv = function(array, discount_factor, initial_offset) {
+        var df, n, r, v, _i, _len;
+        if (initial_offset == null) {
+          initial_offset = 0;
+        }
+        n = 0;
+        df = 1 / (1 + discount_factor);
+        r = Math.pow(df, initial_offset);
+        for (_i = 0, _len = array.length; _i < _len; _i++) {
+          v = array[_i];
+          n = n + (v * r);
+          r = r * df;
+        }
+        return n;
+      };
+    
+      multiply = function(array1, array2) {
+        var a, i, _i, _len, _results;
+        _results = [];
+        for (i = _i = 0, _len = array1.length; _i < _len; i = ++_i) {
+          a = array1[i];
+          _results.push(a * array2[i]);
+        }
+        return _results;
+      };
+    
+      divide = function(array1, array2) {
+        var a, i, _i, _len, _results;
+        _results = [];
+        for (i = _i = 0, _len = array1.length; _i < _len; i = ++_i) {
+          a = array1[i];
+          _results.push(a / array2[i]);
+        }
+        return _results;
+      };
+    
+      start_year = 2015;
+    
+      end_year = 2055;
+    
+      tangle = {
+        initialize: function() {
+          var chart, height, margin, unit, width, xAxis, xScale, yAxis, yScale;
+          this.load_factor_common = 0.1;
+          this.load_factor_change_common = 0.00;
+          this.carbon_common = 21;
+          this.carbon_change_common = 0.08;
+          this.capex_heatpump = 1000;
+          this.capex_gas = 50;
+          this.capex_change_gas = 0;
+          this.capex_change_heatpump = 0;
+          this.opex_heatpump = 100 / 20;
+          this.opex_change_heatpump = 0;
+          this.opex_gas = 100 / 20;
+          this.opex_change_gas = 0;
+          this.fuel_gas = 5;
+          this.fuel_change_gas = 0.01;
+          this.electricity_heatpump = 16;
+          this.electricity_change_heatpump = 0.01;
+          this.life_heatpump = 10;
+          this.life_gas = 10;
+          this.wacc_gas = 0.075;
+          this.wacc_heatpump = 0.075;
+          this.efficiency_gas = 0.85;
+          this.efficiency_heatpump = 3.00;
+          this.emissions_intensity_gas = 184;
+          this.emissions_intensity_change_gas = 0;
+          this.emissions_intensity_electricity_heatpump = 450;
+          this.emissions_intensity_electricity_change_heatpump = -0.1;
+          this.levelised_cost_gas = [];
+          this.levelised_cost_heatpump = [];
+          margin = {
+            top: 25,
+            right: 70,
+            bottom: 20,
+            left: 50
+          };
+          width = 400;
+          height = 300;
+          unit = "p/kWh";
+          this.xScale = xScale = d3.scale.linear().domain([start_year, end_year]).range([0, width - margin.left - margin.right]);
+          this.yScale = yScale = d3.scale.linear().domain([0, 50]).range([height - margin.top - margin.bottom, 0]);
+          xAxis = d3.svg.axis().scale(xScale).orient("bottom").tickFormat(d3.format("0.f"));
+          yAxis = d3.svg.axis().scale(yScale).orient("left");
+          this.line = d3.svg.line().x(function(d, i) {
+            return xScale(start_year + d.year.project_start);
+          }).y(function(d, i) {
+            return yScale(+d.total);
+          });
+          chart = d3.select("#levelised_cost_chart").append("svg").append("g").attr('class', 'drawing').attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+          chart.append("path").attr('class', 'line gas');
+          chart.append("path").attr('class', 'line heatpump');
+          chart.append("g").attr('class', 'x axis').attr("transform", "translate(0," + yScale.range()[0] + ")").call(xAxis);
+          chart.append("g").attr('class', 'y axis').attr("transform", "translate(0," + xScale.range()[0] + ")").call(yAxis);
+          chart.append("text").attr('class', 'xaxislabel').attr("transform", "translate(" + ((xScale.range()[0] + xScale.range()[1]) / 2.0) + "," + (yScale.range()[0] + 35) + ")").text("Year in which boiler or heat pump installed");
+          chart.append("text").attr('class', 'yaxislabel').attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")").text(unit);
+          chart.append("text").attr('class', 'gas label').attr("transform", "translate(" + (xScale.range()[1]) + ",0)").text("Gas");
+          return chart.append("text").attr('class', 'heatpump label').attr("transform", "translate(" + (xScale.range()[1]) + ",0)").text("heatpump");
+        },
+        update: function() {
+          var annual_data, capex, capex_cost, carbon_cost, carbon_emitted, chart, construction_start, cost_of_electricity, cost_of_fuel, costs, data_format, e, efficiency, electricity_cost, electricity_used, emissions_intensity, fuel_cost, fuel_used, heat_produced, levelise, life, load_factor, npv_heat_produced, operation_end, operation_start, opex, opex_cost, p, parameters_that_vary_over_time, series, t, table, technologies, time_horizon, time_series, update_component_table, v, wacc, years, _i, _j, _k, _l, _len, _len1, _len2, _len3, _m, _ref, _ref1, _ref2;
+          time_horizon = end_year - start_year + Math.max(this.life_heatpump, this.life_gas);
+          technologies = ['gas', 'heatpump', 'common'];
+          parameters_that_vary_over_time = ['load_factor', 'carbon', 'capex', 'opex', 'fuel', 'electricity', 'emissions_intensity_electricity', 'emissions_intensity'];
+          for (_i = 0, _len = parameters_that_vary_over_time.length; _i < _len; _i++) {
+            p = parameters_that_vary_over_time[_i];
+            for (_j = 0, _len1 = technologies.length; _j < _len1; _j++) {
+              t = technologies[_j];
+              if (this[p + "_" + t] != null) {
+                this[p + "_over_time_" + t] = expandArray(this[p + "_" + t], time_horizon, this[p + "_change_" + t]);
+              }
+            }
+          }
+          for (construction_start = _k = 0, _ref = end_year - start_year; 0 <= _ref ? _k <= _ref : _k >= _ref; construction_start = 0 <= _ref ? ++_k : --_k) {
+            life = this.life_gas;
+            operation_start = construction_start;
+            operation_end = operation_start + life;
+            load_factor = this.load_factor_over_time_common[construction_start];
+            efficiency = this.efficiency_gas;
+            emissions_intensity = this.emissions_intensity_over_time_gas.slice(operation_start, operation_end);
+            cost_of_fuel = this.fuel_over_time_gas.slice(operation_start, operation_end);
+            carbon_cost = this.carbon_over_time_common.slice(operation_start, operation_end);
+            capex = this.capex_over_time_gas[construction_start];
+            opex = this.opex_over_time_gas[construction_start];
+            wacc = this.wacc_gas;
+            heat_produced = expandArray(load_factor * 365.25 * 24, life);
+            fuel_used = (function() {
+              var _l, _len2, _results;
+              _results = [];
+              for (_l = 0, _len2 = heat_produced.length; _l < _len2; _l++) {
+                e = heat_produced[_l];
+                _results.push(e / efficiency);
+              }
+              return _results;
+            })();
+            carbon_emitted = multiply(fuel_used, emissions_intensity);
+            fuel_cost = multiply(cost_of_fuel, fuel_used);
+            carbon_cost = multiply(multiply(carbon_cost, carbon_emitted), expandArray(100 / 1e6, carbon_emitted.length));
+            capex_cost = expandArray(capex * 100, 1);
+            opex_cost = expandArray(opex * 100, life);
+            npv_heat_produced = npv(heat_produced, wacc);
+            levelise = function(array, offset) {
+              if (offset == null) {
+                offset = 0;
+              }
+              return npv(array, wacc, offset) / npv_heat_produced;
+            };
+            costs = {
+              year: {
+                project_start: construction_start,
+                operate: operation_start
+              },
+              components: {
+                capex: levelise(capex_cost),
+                opex: levelise(opex_cost),
+                fuel: levelise(fuel_cost),
+                carbon: levelise(carbon_cost)
+              },
+              total: 0
+            };
+            _ref1 = costs.components;
+            for (p in _ref1) {
+              v = _ref1[p];
+              costs.total = costs.total + v;
+            }
+            this.levelised_cost_gas[construction_start] = costs;
+            load_factor = this.load_factor_over_time_common[construction_start];
+            efficiency = this.efficiency_heatpump;
+            life = this.life_heatpump;
+            operation_start = construction_start;
+            operation_end = operation_start + life;
+            capex = this.capex_over_time_heatpump[construction_start];
+            opex = this.opex_over_time_heatpump[construction_start];
+            cost_of_electricity = this.electricity_over_time_heatpump.slice(operation_start, operation_end);
+            carbon_cost = this.carbon_over_time_common.slice(operation_start, operation_end);
+            emissions_intensity = this.emissions_intensity_electricity_over_time_heatpump.slice(operation_start, operation_end);
+            wacc = this.wacc_heatpump;
+            heat_produced = expandArray(load_factor * 365.25 * 24, life);
+            electricity_used = (function() {
+              var _l, _len2, _results;
+              _results = [];
+              for (_l = 0, _len2 = heat_produced.length; _l < _len2; _l++) {
+                e = heat_produced[_l];
+                _results.push(e / efficiency);
+              }
+              return _results;
+            })();
+            carbon_emitted = multiply(electricity_used, emissions_intensity);
+            electricity_cost = multiply(cost_of_electricity, electricity_used);
+            carbon_cost = multiply(multiply(carbon_cost, carbon_emitted), expandArray(100 / 1e6, carbon_emitted.length));
+            capex_cost = expandArray(capex * 100, 1);
+            opex_cost = expandArray(opex * 100, life);
+            npv_heat_produced = npv(heat_produced, wacc);
+            levelise = function(array, offset) {
+              if (offset == null) {
+                offset = 0;
+              }
+              return npv(array, wacc, offset) / npv_heat_produced;
+            };
+            costs = {
+              year: {
+                project_start: construction_start,
+                operate: operation_start
+              },
+              components: {
+                capex: levelise(capex_cost),
+                opex: levelise(opex_cost),
+                electricity: levelise(electricity_cost),
+                carbon: levelise(carbon_cost)
+              },
+              total: 0
+            };
+            _ref2 = costs.components;
+            for (p in _ref2) {
+              v = _ref2[p];
+              costs.total = costs.total + v;
+            }
+            this.levelised_cost_heatpump[construction_start] = costs;
+          }
+          chart = d3.select("#levelised_cost_chart .drawing");
+          chart.select("path.gas").transition().attr("d", this.line(this.levelised_cost_gas));
+          chart.select("path.heatpump").transition().attr("d", this.line(this.levelised_cost_heatpump));
+          chart.select("text.gas").transition().attr("transform", "translate(" + (this.xScale.range()[1]) + "," + this.yScale(this.levelised_cost_gas[this.levelised_cost_gas.length - 1].total) + ")");
+          chart.select("text.heatpump").transition().attr("transform", "translate(" + (this.xScale.range()[1]) + "," + this.yScale(this.levelised_cost_heatpump[this.levelised_cost_heatpump.length - 1].total) + ")");
+          table = d3.select("table#data");
+          years = table.selectAll("th.year").data(["Parameter"].concat(expandArrayIncremental(start_year, time_horizon, 1)));
+          years.enter().append("th").attr('class', 'year');
+          years.exit().remove();
+          years.text(function(d) {
+            return d;
+          });
+          time_series = [];
+          for (_l = 0, _len2 = parameters_that_vary_over_time.length; _l < _len2; _l++) {
+            p = parameters_that_vary_over_time[_l];
+            for (_m = 0, _len3 = technologies.length; _m < _len3; _m++) {
+              t = technologies[_m];
+              if (this[p + "_over_time_" + t] != null) {
+                time_series.push({
+                  name: p + " over time " + t,
+                  values: this[p + "_over_time_" + t]
+                });
+              }
+            }
+          }
+          series = table.selectAll("tr.series").data(time_series);
+          series.enter().append("tr").attr('class', 'series').append("td").attr("class", "label").text(function(d) {
+            return d.name;
+          });
+          series.exit().remove();
+          data_format = d3.format("0.1f");
+          annual_data = series.selectAll("td.data").data(function(d) {
+            return d.values;
+          });
+          annual_data.enter().append("td").attr('class', 'data');
+          annual_data.text(function(d) {
+            return data_format(d);
+          });
+          annual_data.exit().remove();
+          update_component_table = function(table_id, lc) {
+            var totals;
+            table = d3.select(table_id);
+            years = table.select("tr.header").selectAll("th.year").data(expandArrayIncremental(start_year, end_year - start_year + 1, 1));
+            years.enter().append("th").attr('class', 'year');
+            years.exit().remove();
+            years.text(function(d) {
+              return d;
+            });
+            series = table.select("tbody").selectAll("tr.components").data(d3.map(lc[0].components).keys());
+            series.enter().append("tr").attr('class', 'components').append("td").attr("class", "label").text(function(d) {
+              return d;
+            });
+            series.exit().remove();
+            annual_data = series.selectAll("td.data").data(function(d) {
+              return lc.map(function(e) {
+                return e.components[d];
+              });
+            });
+            annual_data.enter().append("td").attr('class', 'data');
+            annual_data.text(function(d) {
+              return data_format(d);
+            });
+            annual_data.exit().remove();
+            totals = table.select("tfoot tr").selectAll("td.data").data(lc.map(function(e) {
+              return e.total;
+            }));
+            totals.enter().append("td").attr('class', 'data');
+            totals.text(function(d) {
+              return data_format(d);
+            });
+            return totals.exit().remove();
+          };
+          update_component_table('table#gasData', this.levelised_cost_gas);
+          return update_component_table('table#heatpumpData', this.levelised_cost_heatpump);
+        }
+      };
+    
+      t = new Tangle(document.getElementById("tangle"), tangle);
+    
+    }).call(this);
+  </script>
+</html>

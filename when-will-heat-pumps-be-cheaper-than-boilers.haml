@@ -1,0 +1,581 @@
+!!! 5
+%html
+  %meta{ 'http-equiv' => "X-UA-Compatible",  'content' => "IE=edge"}
+  %meta{ charset: "UTF-8"}
+  // Load all the javascript ansd stylesheet dependencies
+  %script{type:'text/javascript', src: "Tangle.js"}
+  - %w{mootools sprintf BVTouchable TangleKit TKLogarithmicAdjustableNumber}.each do |js|
+    %script{type:'text/javascript', src: "TangleKit/#{js}.js"}
+      
+  %script{type:'text/javascript', src: "d3.min.js"}
+  %title When might heat pumps be cheaper than gas boilers?
+
+  // Prepare the CSS
+  %link{rel:'stylesheet', href:'TangleKit/TangleKit.css', type: 'text/css'}
+  :css
+    body {
+      padding: 2% 5%;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    span[data-var] {
+      background-color: #FFFDCC;
+    }
+    span[data-var].TKAdjustableNumber, span[data-var].TKLogarithmicAdjustableNumber {
+      background-color: #fff;
+    }
+    span.result {
+      font-weight: bold;
+    }
+    td.control {
+      text-align: right;
+      width: 150px;
+    }
+    div#warning {
+      background: yellow;
+      border: solid 1px black;
+      padding: 5px;
+      margin: 5px;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    #levelised_cost_chart {
+      float: right;
+      width: 400px;
+      height: 400px;
+      margin: 0;
+      padding: 0;
+    }
+    #levelised_cost_chart svg {
+      width: 400px;
+      height: 400px;
+    }
+    .axis path, .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+
+    .yaxislabel {
+      text-anchor: end;
+    }
+
+    .xaxislabel {
+      text-anchor: middle;
+    }
+
+    .line {
+      fill: none;
+      stroke: black;
+      stroke-width: 3px;
+    }
+
+    .gas {
+      stroke: green;
+    }
+
+    .heatpump {
+      stroke: blue;
+    }
+
+    text.label {
+      dominant-baseline: middle;
+    }
+
+    tr.series td.label {
+      width: 150px;
+    }
+
+    td.data {
+      text-align: right;
+    }
+
+  // Draw the interface
+  %body
+    %h1 When could heat pumps be cheaper than gas boilers?
+
+    %div#warning 
+      Using data made up by Tom Counsell, not government data. Not Quality Assured so may have bugs.
+    
+    #levelised_cost_chart
+
+    #tangle
+      %table
+        %tr
+          %th
+          %th{colspan:2} Gas boilers
+          %th{colspan:2} Heat pumps
+          %th{colspan:2} Common across both
+        %tr
+          %th Setting
+          %th Today
+          %th Annual change
+          %th Today
+          %th Annual change
+          %th Today
+          %th Annual change
+
+        - technologies = %w{ gas heatpump common}
+        :ruby
+          parameters = [
+            ['Load factor', 'load_factor', '%',  0, 1, true, %w{common}],
+            ['Cost of carbon', 'carbon', '&pound;/tCO2',  0, 500, true, %w{common}],
+            ['Capital cost', 'capex', '&pound;/kW',  0, 5000, true, %w{gas heatpump}],
+            ['Operating cost', 'opex', '&pound;/kW-yr',  1, 50, true, %w{gas heatpump}],
+            ['Efficiency', 'efficiency', '%',  0, 5, true, %w{gas heatpump}],
+            ['Cost of gas', 'fuel', 'p/kWh',  0, 100, true, %w{gas}],
+            ['Cost of electricity', 'electricity', 'p/kWh',  0, 100, true, %w{heatpump}],
+            ['Carbon intensity of electricity', 'emissions_intensity_electricity', 'gCO<sub>2</sub>/kWh',  0, 1000, true, %w{heatpump}],
+            ['Carbon intensity of gas', 'emissions_intensity', 'gCO<sub>2</sub>/kWh',  0, 3000, true, %w{gas}],
+            ['Lifespan', 'life', 'years',  5, 20, true, %w{gas heatpump}],
+            ['WACC', 'wacc', '%',  0, 0.2, true, %w{gas heatpump}],
+          ]
+        - parameters.each do |p|
+          %tr
+            %td= p[0]
+            - technologies.each do |t|
+              %td.control
+                - if p[6].include?(t)
+                  - if p[2] == '%'
+                    %span.TKAdjustableNumber{data:{var: p[1]+"_"+t, format: 'percent', step: 0.01, min: p[3], max: p[4]}}
+                  - else
+                    %span.TKLogarithmicAdjustableNumber{data:{ var: p[1]+"_"+t, min: p[3], max: p[4]}}
+                      = p[2]
+              %td.control
+                - if p[5]
+                  %span.TKAdjustableNumber{data:{var: p[1]+"_change_"+t, format: 'percent', step: 0.01, min: -0.2, max: 0.2}}
+
+    %h2 Data table
+
+    %h3 Costs that change over time
+    %table#data
+      %thead
+        %tr.header
+          %th.title
+      %tbody
+
+    %h3 Components of the levelised cost of gas boilers
+    %table#gasData
+      %thead
+        %tr.header
+          %th.label Parameter
+      %tbody
+      %tfoot
+        %tr.total
+          %td.title
+            Total
+
+    %h3 Components of the levelised cost of heat pumps
+    %table#heatpumpData
+      %thead
+        %tr.header
+          %th.label Parameter
+      %tbody
+      %tfoot
+        %tr.total
+          %td.title
+            Total
+
+    %h2 Footnotes
+
+    %ol
+      %li#footnoteWhyDECCsNumbersAreDifferent 
+
+
+
+    #links
+      The source code for this tangle is at 
+      %a{href: 'https://github.com/tamc/tamc-tangles/blob/gh-pages/when-will-heat-pumps-be-cheaper-thank-boilers.haml'} https://github.com/tamc/tamc-tangles/blob/gh-pages/when-will-heat-pumps-be-cheaper-thank-boilers.haml
+      is &copy; Tom Counsell and is licenced under the open-source
+      %a{href: 'http://opensource.org/licenses/MIT'}MIT
+      license. Please suggest fixes and report bugs at 
+      %a{href: 'http://github.com/tamc/tamc-tangles'}http://github.com/tamc/tamc-tangles
+
+
+  // Do the caclulations
+  :coffeescript
+    # This takes a first number, a number of periods and a multiplier to apply to that first
+    # number each period. It returns an array.
+    #
+    # e.g., expandArray(10, 5, 0.1) # =  [10, 11, 12.1, 13.31, 14.641] 
+    expandArray = (number, periods, change_per_period = 0) ->
+      result = [number]
+      return result if periods == 1
+      return [] if periods < 1
+      for i in [1..(periods-1)]
+        result[i] = result[i-1] * (1+change_per_period)
+      result
+
+    # This takes a first number, a number of periods and a number to add to that first
+    # number each period. It returns an array.
+    #
+    # e.g., expandArrayIncremental(10, 5, 2) # =  [10, 12, 14, 16, 18] 
+    expandArrayIncremental = (number, periods, change_per_period = 0) ->
+      result = [number]
+      return result if periods == 1
+      return [] if periods < 1
+      for i in [1..(periods-1)]
+        result[i] = result[i-1] + change_per_period
+      result
+
+    # This calculates the net present value of the content of the first argument
+    # using the second argument as the discount factor. If the third argument is
+    # zero then the first element of the array has a discount factor of 1
+    # if it is 1 then the first element of the array has a discount factor of (1+discount_factor)
+    npv = (array, discount_factor, initial_offset = 0) ->
+      n = 0
+      df = (1/(1+discount_factor))
+      r = Math.pow(df,initial_offset)
+      for v in array
+        n = n + (v*r)
+        r = r * df
+      n
+
+    multiply = ( array1, array2) ->
+      for a, i in array1
+        a * array2[i]
+
+    divide = ( array1, array2) ->
+      for a, i in array1
+        a / array2[i]
+
+    start_year = 2015
+    end_year = 2055
+
+    tangle =
+      initialize: () ->
+
+        # FIRST THE TANGLE VARIABLES
+
+        # Things that are common to both technologies and change
+        @load_factor_common = 0.1 # 10% of the year
+        @load_factor_change_common = 0.00 # 10% of the year
+
+        @carbon_common = 21 # £/tCO2e 2015 Carbon Price Floor
+        @carbon_change_common = 0.08
+
+        @capex_heatpump = 1000 # £/kWpeak
+        @capex_gas = 50 # £/kWpeak
+        @capex_change_gas = 0
+        @capex_change_heatpump = 0
+
+        @opex_heatpump = 100 / 20 # £100/yr for a 20 kW pump?
+        @opex_change_heatpump = 0
+        @opex_gas = 100 / 20 # £100/yr for a 20 kW boiler?
+        @opex_change_gas = 0
+
+        @fuel_gas = 5 # p/kWh
+        @fuel_change_gas = 0.01
+
+        @electricity_heatpump = 16 # p/kWh 
+        @electricity_change_heatpump = 0.01
+
+        @life_heatpump = 10
+        @life_gas = 10
+
+        @wacc_gas = 0.075
+        @wacc_heatpump = 0.075
+
+        @efficiency_gas = 0.85
+        @efficiency_heatpump = 3.00
+
+        @emissions_intensity_gas= 184 # gCO2/kWh
+        @emissions_intensity_change_gas= 0 # gCO2/kWh
+        @emissions_intensity_electricity_heatpump = 450 # gCO2/kWh
+        @emissions_intensity_electricity_change_heatpump = -0.1 # gCO2/kWh
+
+        # Results
+        @levelised_cost_gas = []
+        @levelised_cost_heatpump = []
+
+        # THEN THE CHART
+
+        margin =
+          top: 25
+          right: 70
+          bottom: 20
+          left: 50
+
+        width = 400
+        height = 300
+
+        unit = "p/kWh"
+
+        @xScale = xScale = d3.scale.linear()
+                  .domain([start_year, end_year])
+                  .range([0, width - margin.left - margin.right])
+
+        @yScale = yScale = d3.scale.linear()
+                  .domain([0, 50])
+                  .range([height - margin.top - margin.bottom, 0])
+
+        xAxis = d3.svg.axis()
+          .scale(xScale)
+          .orient("bottom")
+          .tickFormat(d3.format("0.f"))
+
+        yAxis = d3.svg.axis().scale(yScale).orient("left")
+
+        @line = d3.svg.line()
+          .x((d,i) -> xScale(start_year+d.year.project_start))
+          .y((d,i) -> yScale(+d.total))
+
+        chart = d3.select("#levelised_cost_chart")
+                  .append("svg")
+                    .append("g")
+                      .attr('class', 'drawing')
+                      .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+        chart.append("path")
+          .attr('class', 'line gas')
+
+        chart.append("path")
+          .attr('class', 'line heatpump')
+
+        chart.append("g")
+          .attr('class', 'x axis')
+          .attr("transform", "translate(0," + yScale.range()[0] + ")")
+          .call(xAxis)
+
+        chart.append("g")
+          .attr('class', 'y axis')
+          .attr("transform", "translate(0," + xScale.range()[0] + ")")
+          .call(yAxis)
+
+        chart.append("text")
+          .attr('class', 'xaxislabel')
+          .attr("transform", "translate("+((xScale.range()[0]+xScale.range()[1])/2.0)+","+(yScale.range()[0]+35)+")")
+          .text("Year in which boiler or heat pump installed")
+
+        chart.append("text")
+          .attr('class', 'yaxislabel')
+          .attr("transform", "translate(0," + (xScale.range()[0] - 10) + ")")
+          .text(unit)
+
+        chart.append("text")
+          .attr('class', 'gas label')
+          .attr("transform", "translate(" + (xScale.range()[1]) + ",0)")
+          .text("Gas")
+
+        chart.append("text")
+          .attr('class', 'heatpump label')
+          .attr("transform", "translate(" + (xScale.range()[1]) + ",0)")
+          .text("heatpump")
+
+      update: () ->
+
+        time_horizon = end_year - start_year + Math.max(@life_heatpump, @life_gas)
+        technologies = [ 'gas',  'heatpump', 'common']
+        parameters_that_vary_over_time = ['load_factor', 'carbon', 'capex', 'opex', 'fuel', 'electricity', 'emissions_intensity_electricity', 'emissions_intensity']
+        
+        for p in parameters_that_vary_over_time
+          for t in technologies
+            @[p+"_over_time_"+t] = expandArray(@[p+"_"+t], time_horizon, @[p+"_change_"+t]) if @[p+"_"+t]?
+
+        for construction_start in [0..(end_year-start_year)]
+          # Work out the answer for gas
+          life = @life_gas
+          operation_start = construction_start
+          operation_end = operation_start + life
+
+          load_factor = @load_factor_over_time_common[construction_start]
+          efficiency = @efficiency_gas
+          emissions_intensity = @emissions_intensity_over_time_gas.slice(operation_start, operation_end)
+          cost_of_fuel = @fuel_over_time_gas.slice(operation_start, operation_end)
+          carbon_cost = (@carbon_over_time_common.slice(operation_start, operation_end))
+          capex = @capex_over_time_gas[construction_start]
+          opex = @opex_over_time_gas[construction_start]
+          wacc = @wacc_gas
+
+          heat_produced = expandArray(load_factor*365.25*24, life) # kWh
+          fuel_used = ((e/efficiency) for e in heat_produced) # kWh
+          carbon_emitted = multiply(fuel_used, emissions_intensity) # gCO2
+          fuel_cost = multiply(cost_of_fuel, fuel_used) # p
+          carbon_cost = multiply(multiply(carbon_cost, carbon_emitted), expandArray(100/1e6, carbon_emitted.length)) # p
+          capex_cost = expandArray(capex * 100, 1) # p
+          opex_cost = expandArray(opex * 100, life) # p
+
+          npv_heat_produced = npv(heat_produced, wacc)
+
+          levelise = (array, offset = 0) ->
+            npv(array, wacc, offset) / npv_heat_produced
+
+          costs =
+            year:
+              project_start: construction_start
+              operate: operation_start
+            components:
+              capex: levelise(capex_cost)
+              opex: levelise(opex_cost)
+              fuel: levelise(fuel_cost)
+              carbon: levelise(carbon_cost)
+            total: 0
+
+          for p, v of costs.components
+            costs.total = costs.total + v
+
+          @levelised_cost_gas[construction_start] = costs
+
+          # Work out the answer for heatpump
+          load_factor = @load_factor_over_time_common[construction_start]
+          efficiency = @efficiency_heatpump
+          life = @life_heatpump
+          operation_start = construction_start
+          operation_end = operation_start + life
+
+          capex = @capex_over_time_heatpump[construction_start]
+          opex = @opex_over_time_heatpump[construction_start]
+          cost_of_electricity = @electricity_over_time_heatpump.slice(operation_start, operation_end)
+          carbon_cost = (@carbon_over_time_common.slice(operation_start, operation_end))
+          emissions_intensity =  @emissions_intensity_electricity_over_time_heatpump.slice(operation_start, operation_end)
+          wacc = @wacc_heatpump
+
+          heat_produced = expandArray(load_factor*365.25*24, life) # kWh
+          electricity_used = ((e/efficiency) for e in heat_produced) # kWh
+          carbon_emitted = multiply(electricity_used,emissions_intensity)
+
+          electricity_cost = multiply(cost_of_electricity, electricity_used) # p
+          carbon_cost = multiply(multiply(carbon_cost, carbon_emitted), expandArray(100/1e6, carbon_emitted.length)) # p
+          capex_cost = expandArray(capex * 100, 1) # p
+          opex_cost = expandArray(opex * 100, life) # p
+
+          npv_heat_produced = npv(heat_produced, wacc)
+
+          levelise = (array, offset = 0) ->
+            npv(array, wacc, offset) / npv_heat_produced
+
+          costs =
+            year:
+              project_start: construction_start
+              operate: operation_start
+            components:
+              capex: levelise(capex_cost)
+              opex: levelise(opex_cost)
+              electricity: levelise(electricity_cost)
+              carbon: levelise(carbon_cost)
+            total: 0
+
+          for p, v of costs.components
+            costs.total = costs.total + v
+
+          @levelised_cost_heatpump[construction_start] = costs
+
+        chart = d3.select("#levelised_cost_chart .drawing")
+
+        chart.select("path.gas")
+          .transition()
+          .attr("d", @line(@levelised_cost_gas))
+
+        chart.select("path.heatpump")
+          .transition()
+          .attr("d", @line(@levelised_cost_heatpump))
+
+        chart.select("text.gas")
+          .transition()
+          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_gas[@levelised_cost_gas.length-1].total)+")")
+
+        chart.select("text.heatpump")
+          .transition()
+          .attr("transform", "translate(" + (@xScale.range()[1]) + ","+@yScale(@levelised_cost_heatpump[@levelised_cost_heatpump.length-1].total)+")")
+        
+        table = d3.select("table#data")
+
+        years = table.selectAll("th.year")
+          .data(["Parameter"].concat(expandArrayIncremental(start_year, time_horizon, 1)))
+
+        years.enter().append("th")
+          .attr('class','year')
+
+        years.exit().remove()
+
+        years.text((d) -> d)
+
+        time_series = []
+        
+        for p in parameters_that_vary_over_time
+          for t in technologies
+            if @[p+"_over_time_"+t]?
+              time_series.push({name: p+" over time "+t, values: @[p+"_over_time_"+t]})
+
+        series = table.selectAll("tr.series")
+          .data(time_series)
+
+        series.enter().append("tr")
+          .attr('class', 'series')
+          .append("td")
+            .attr("class", "label")
+            .text((d) -> d.name)
+
+        series.exit().remove()
+
+        data_format = d3.format("0.1f")
+
+        annual_data = series.selectAll("td.data")
+          .data((d) -> d.values)
+
+        annual_data.enter().append("td")
+          .attr('class', 'data')
+
+        annual_data
+          .text((d) -> data_format(d))
+
+        annual_data.exit().remove()
+
+        update_component_table = (table_id, lc) ->
+          table = d3.select(table_id)
+
+          years = table.select("tr.header").selectAll("th.year")
+            .data(expandArrayIncremental(start_year, end_year - start_year + 1, 1))
+
+          years.enter().append("th")
+            .attr('class','year')
+
+          years.exit().remove()
+
+          years.text((d) -> d)
+
+          series = table.select("tbody").selectAll("tr.components")
+            .data(d3.map(lc[0].components).keys())
+
+          series.enter().append("tr")
+            .attr('class', 'components')
+            .append("td")
+              .attr("class", "label")
+              .text((d) -> d)
+
+          series.exit().remove()
+
+          annual_data = series.selectAll("td.data")
+            .data((d) -> lc.map( (e) -> e.components[d] ))
+
+          annual_data.enter().append("td")
+            .attr('class', 'data')
+
+          annual_data
+            .text((d) -> data_format(d))
+
+          annual_data.exit().remove()
+
+          totals = table.select("tfoot tr").selectAll("td.data")
+            .data(lc.map( (e) -> e.total))
+
+          totals.enter().append("td")
+            .attr('class', 'data')
+
+          totals
+            .text((d) -> data_format(d))
+
+          totals.exit().remove()
+
+        update_component_table('table#gasData', @levelised_cost_gas)
+        update_component_table('table#heatpumpData', @levelised_cost_heatpump)
+
+
+    t = new Tangle(document.getElementById("tangle"), tangle)
