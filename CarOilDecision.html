@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Car Oil Decision</title>
+
+	<!-- Tangle -->
+	<script type="text/javascript" src="Tangle.js"></script>
+
+	<!-- TangleKit (optional) -->
+	<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+	<script type="text/javascript" src="TangleKit/mootools.js"></script>
+	<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+	<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+	<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+  <style>
+    body {
+      padding: 2% 5%;
+      max-width: 740px;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    span[data-var] {
+      background-color: #FFFDCC;
+    }
+    span[data-var].TKAdjustableNumber  {
+      background-color: #fff;
+    }
+    blockquote {
+      color: #555;
+      margin: 50px 0px;
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  </style>
+	<!-- example -->
+	<script type="text/javascript">
+		function setUpTangle () {
+
+			var tangle = new Tangle(document, {
+				initialize: function () {
+          this.oil_energy_increase = 25;
+          this.relevant_losses = 10;
+          this.mpg = 55;
+          this.miles_per_year = 7500;
+          this.pence_per_litre = 125;
+
+          this.failure_risk = 100;
+          this.damage_percent = 10;
+          this.car_cost = 20000;
+				},
+				update: function () {
+          let fuelchange = 1 + ((this.oil_energy_increase/100) * (this.relevant_losses / 100)) 
+          this.efficiency_drop = (1 - (1/(fuelchange))) * 100;
+          let litres_per_gallon = 4.546;
+          let kg_co2e_litre_petrol = 2.20904; // 2019 biofuel blend inc upstream
+          this.to_mpg = (this.mpg / fuelchange);
+          this.fuel_from = this.miles_per_year / this.mpg;
+          this.fuel_to = this.miles_per_year / this.to_mpg;
+          this.cost_from = this.fuel_from * this.pence_per_litre * litres_per_gallon / 100.0; 
+          this.cost_to = this.fuel_to * this.pence_per_litre * litres_per_gallon / 100.0; 
+          this.cost_change = this.cost_to - this.cost_from;
+
+          let uk_ghg_per_capita = 5.5;
+          this.ghg_from = this.fuel_from * litres_per_gallon * kg_co2e_litre_petrol / 1000;
+          this.ghg_to = this.fuel_to * litres_per_gallon * kg_co2e_litre_petrol / 1000;
+          this.ghg_percent = ((this.ghg_to - this.ghg_from) / uk_ghg_per_capita) * 100;
+
+          this.failure_cost = ((1/this.failure_risk) / 10) * (this.damage_percent / 100) * this.car_cost;
+				}
+			});
+		}
+
+	</script>
+</head>
+
+<body onload="setUpTangle();">
+<h1>How important is the type of oil you put in your car?</h1>
+<p>Triggered by an email from a friend asking me to sense check his calculations, this is an interactive estimate of how much difference the viscosity of oil you put in your car makes, financially and to climate change.</p>
+
+<p>If putting a more viscous oil in your car increases the pumping and friction requirements by <span class="TKAdjustableNumber" data-var="oil_energy_increase" data-min="0" data-max="50"> percent</span> and these were <span class="TKAdjustableNumber" data-var="relevant_losses" data-format="%.0f" data-min="5" data-max="30" data-step="1"> percent</span> of a car's energy requirement, then it will reduce the car's overall efficiency by <span data-var="efficiency_drop" data-format="%.1f"> percent</span>.</p>
+
+<p>This is the critical assumption and is hard to estimate because the relationship between the oil's labelled viscosity and losses is not linear and varies depending on the design of the engine, how it is used, and the local temperature. Worst case, less viscous oils can increase friction if they are too thin to form a complete film between drive surfaces, though this is probably unlikely with standard oils in modern cars in temperate enviroments.</p>
+
+
+That is equivalent to going from  <span data-var="mpg" class="TKAdjustableNumber" data-format="%.0f" data-min="20" data-max="70" data-step="1"></span> to <span data-var="to_mpg" data-format="%.0f"> miles per gallon</span>. If you drive <span class="TKAdjustableNumber" data-var="miles_per_year" data-min="2500" data-max="20000" data-step="1000"> miles</span> a year, that increases the fuel you would use in a year from <span data-var="fuel_from" data-format="%.0f"></span> to <span data-var="fuel_to" data-format="%.0f"> gallons</span>. If fuel costs <span class="TKAdjustableNumber" data-var="pence_per_litre" data-min="50" data-max="200" data-step="1"> pence per litre</span> then that increases your spend on fuel from <span data-var="cost_from" data-format="%.0f"></span> to <span data-var="cost_to" data-format="%.0f"> pounds a year</span>, an increase of <span data-var="cost_change" data-format="%.0f"> pounds a year<span>.</p>
+
+<p>This will also increase emissions due to driving the car from <span data-var='ghg_from' data-format="%.2f"></span> to <span data-var='ghg_to' data-format="%.2f"> tonnes of CO<sub>2e</sub> per year</span> which is an increase of about <span data-var='ghg_percent' data-format="%.1f"> percent</span> of UK per capita GHG emissions.
+
+<p>If putting a less viscous oil in your car means that 1 car in <span data-var="failure_risk" class="TKAdjustableNumber" data-format="%.0f" data-min="10" data-max="10000" data-step="1"></span> suffers oil related damage over its life that costs <span class="TKAdjustableNumber" data-var="damage_percent" data-min="0" data-max="20" data-step="1"> percent</span> of the car's <span class="TKAdjustableNumber" data-var="car_cost" data-min="1000" data-max="30000" data-step="1000" data-format="%.0f"> pounds cost</span> to put right, then that would be an expected cost of <span data-var="failure_cost" data-format="%.0f"> pounds per year</span>.
+
+</body>
+</html>
