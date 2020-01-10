@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>The Power of Pension Fees</title>
+
+	<!-- Tangle -->
+	<script type="text/javascript" src="Tangle.js"></script>
+
+	<!-- TangleKit (optional) -->
+	<link rel="stylesheet" href="TangleKit/TangleKit.css" type="text/css">
+	<script type="text/javascript" src="TangleKit/mootools.js"></script>
+	<script type="text/javascript" src="TangleKit/sprintf.js"></script>
+	<script type="text/javascript" src="TangleKit/BVTouchable.js"></script>
+	<script type="text/javascript" src="TangleKit/TangleKit.js"></script>
+  <style>
+    body {
+      padding: 2% 5%;
+      max-width: 740px;
+    }
+    span.note {
+      display: block;
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    span.note a {
+      color: #999;
+    }
+    span[data-var] {
+      background-color: #FFFDCC;
+    }
+    span[data-var].TKAdjustableNumber  {
+      background-color: #fff;
+    }
+    blockquote {
+      color: #555;
+      margin: 50px 0px;
+      padding-left: 50px;
+      padding-right: 50px;
+    }
+  </style>
+	<!-- example -->
+	<script type="text/javascript">
+    function calculatePotAndChargesYearly(years, pounds_per_month, percent_charge, percent_growth, payment_percent_growth) {
+      pension_pot_pounds = 0;
+      total_charge_pounds = 0;
+
+      years_to_interest_more_than_payments = undefined;
+      years_to_charges_more_than_payments = undefined;
+
+      pounds_per_year = pounds_per_month * 12;
+
+      for(var year = 0; year < years; year++) {
+        pension_pot_growth = pension_pot_pounds * percent_growth;
+        pension_pot_pounds = pension_pot_pounds + pounds_per_year + pension_pot_growth;
+        charge = pension_pot_pounds * percent_charge;
+        total_charge_pounds = total_charge_pounds + charge;
+        pension_pot_pounds = pension_pot_pounds - charge;
+
+        if(years_to_interest_more_than_payments == undefined) {
+          if( pension_pot_growth > pounds_per_year ) {
+            years_to_interest_more_than_payments = year;
+          }
+        };
+
+        if(years_to_charges_more_than_payments == undefined) {
+          if( charge > pounds_per_year) {
+            years_to_charges_more_than_payments = year;
+          }
+        };
+
+        pounds_per_year = pounds_per_year * (1+payment_percent_growth);
+      }
+
+      return {
+        total_charge_pounds: total_charge_pounds,
+        pension_pot_pounds: pension_pot_pounds,
+        months_to_interest_more_than_payments: years_to_interest_more_than_payments * 12,
+        months_to_charges_more_than_payments: years_to_charges_more_than_payments * 12,
+      };
+    };
+
+    function calculatePotAndChargesMonthly(years, pounds_per_month, percent_charge, percent_growth, payment_percent_growth) {
+      pension_pot_pounds = 0;
+      total_charge_pounds = 0;
+
+      percent_charge_monthly = 1-Math.pow(1-percent_charge,1.0/12.0);
+      percent_growth_monthly = Math.pow(1+percent_growth,1.0/12.0)-1;
+      payment_percent_growth_monthly = Math.pow(1+payment_percent_growth,1.0/12.0)-1;
+
+      months_to_interest_more_than_payments = undefined;
+      months_to_charges_more_than_payments = undefined;
+
+      for(var month = 0; month < (years*12); month++) {
+        pension_pot_growth = pension_pot_pounds * percent_growth_monthly;
+        pension_pot_pounds = pension_pot_pounds + pounds_per_month + pension_pot_growth;
+        charge = pension_pot_pounds * percent_charge_monthly;
+        total_charge_pounds = total_charge_pounds + charge;
+        pension_pot_pounds = pension_pot_pounds - charge;
+
+        if(months_to_interest_more_than_payments == undefined) {
+          if( pension_pot_growth > pounds_per_month ) {
+            months_to_interest_more_than_payments = month;
+          }
+        };
+
+        if(months_to_charges_more_than_payments == undefined) {
+          if( charge > pounds_per_month) {
+            months_to_charges_more_than_payments = month;
+          }
+        };
+
+        if(month != 0 && (month % 12) == 0) {
+          pounds_per_month = pounds_per_month * (1+payment_percent_growth);
+        }
+        //pounds_per_month = pounds_per_month * (1+payment_percent_growth_monthly);
+      }
+
+      return {
+        total_charge_pounds: total_charge_pounds,
+        pension_pot_pounds: pension_pot_pounds,
+        months_to_interest_more_than_payments: months_to_interest_more_than_payments,
+        months_to_charges_more_than_payments: months_to_charges_more_than_payments
+      };
+    };
+
+    function months_to_years_and_months_string(months) {
+      if(months == undefined) {
+        return "never";
+      } else {
+        years = Math.floor(months / 12);
+        months = months % 12;
+        return ""+years+" years "+months+" months";
+      }
+    }
+
+		function setUpTangle () {
+
+			var tangle = new Tangle(document, {
+				initialize: function () {
+				  this.years = 46; // Based on press release
+          this.pounds_per_month = 100; // Based on press release
+          this.percent_charge = 1; // Based on press release
+          this.percent_growth = 7; // Based on More or Less program
+          this.percent_charge_A = 1; // Based on press release
+          this.percent_charge_B = 0.75; // Based on press release
+          this.payment_percent_growth = 4; // Based on https://www.gov.uk/government/uploads/system/uploads/attachment_data/file/254332/cm8737-pension-charges.pdf figure 2 page 11
+				},
+				update: function () {
+          no_charge = calculatePotAndChargesMonthly(this.years, this.pounds_per_month, 0, this.percent_growth/100, this.payment_percent_growth/100)
+          central_case = calculatePotAndChargesMonthly(this.years, this.pounds_per_month, this.percent_charge/100, this.percent_growth/100, this.payment_percent_growth/100);
+          case_A = calculatePotAndChargesMonthly(this.years, this.pounds_per_month, this.percent_charge_A/100, this.percent_growth/100, this.payment_percent_growth/100);
+          case_B = calculatePotAndChargesMonthly(this.years, this.pounds_per_month, this.percent_charge_B/100, this.percent_growth/100, this.payment_percent_growth/100);
+
+          console.log(central_case);
+
+          this.total_charge_pounds = no_charge.pension_pot_pounds - central_case.pension_pot_pounds;
+          this.total_extra_pot_A = case_A.pension_pot_pounds - central_case.pension_pot_pounds;
+          this.total_extra_pot_B = case_B.pension_pot_pounds - central_case.pension_pot_pounds;
+          
+          this.years_to_interest_more_than_payments = months_to_years_and_months_string(central_case.months_to_interest_more_than_payments);
+          this.years_to_charges_more_than_payments = months_to_years_and_months_string(central_case.months_to_charges_more_than_payments);
+				}
+			});
+		}
+
+	</script>
+</head>
+
+<body onload="setUpTangle();">
+<h1>The Power of Pension Fees</h1>
+<p>Inspired by an episode of <a href='http://www.bbc.co.uk/programmes/b03mjcbk'>More of Less</a>, I've made an interactive version of a <a href='https://www.gov.uk/government/news/government-to-bring-forward-reforms-to-help-savers-and-protect-pensions-pots'>government press release on pension fees</a> using the <a href='http://worrydream.com/Tangle/'>Tangle</a> javascript library. Click and drag on any blue number to see what happens</a>. Note: it doesn't give <i>quite</i> the same answers as the government figures; 'view source' on this page to see the calculations, and please <a href='mailto:tom@counsell.org'>tell me why</a>.</p>
+
+<blockquote>
+<p>While the average charge on new pension schemes is around 0.51% the Office of Fair Trading estimates that there are over 186,000 pension pots with £2.65bn assets that are subject to an annual charge of above 1%.</p>
+
+<p>These differences can equate to considerable amounts of money. For example, in the case of someone who saves throughout their working life 
+(<span data-var="years" class="TKAdjustableNumber" data-min="1" data-max="80"> years</span> at <span data-var="pounds_per_month" class="TKAdjustableNumber" data-min="50" data-max="1000" data-format="£%d" data-step="10"> per month</span>), they could end up losing almost <span data-var="total_charge_pounds" data-format="£%d"></span> from their pot with a <span data-var="percent_charge" class="TKAdjustableNumber" data-format="%.2f" data-min="0" data-max="10" data-step="0.05"> per cent</span> charge.</p>
+
+<p>This also means that the same individual could end up having considerably more money in their pot with a lower charge – an additional <span data-var="total_extra_pot_A" data-format="£%d"></span> at retirement with a <span data-var="percent_charge_A" class="TKAdjustableNumber" data-format="%.2f" data-min="0" data-max="10" data-step="0.1"> per cent</span> charge, and an extra <span data-var="total_extra_pot_B" data-format="£%d"></span> with a  <span data-var="percent_charge_B" class="TKAdjustableNumber" data-format="%.2f" data-min="0" data-max="10" data-step="0.05"> per cent</span> charge, compared to a  <span data-var="percent_charge" data-format="%.2f"> per cent</span> charge.</p>
+</blockquote>
+
+<p>As mentioned in <a href='http://www.bbc.co.uk/programmes/b03mjcbk'>More of Less</a>, there are two un-mentioned assumptions:</p>
+<ol>
+  <li>it assumes that the pension pot grows at <span data-var="percent_growth" class="TKAdjustableNumber" data-format="%.1f" data-min='0' data-max='20' data-step='0.1'> per cent</span> each year.</li>
+  <li>it assumes that payments into the pension pot grow at <span data-var="payment_percent_growth" class="TKAdjustableNumber" data-format="%.1f" data-min='0' data-max='20' data-step='0.1'> per cent</span> each year.</li>
+</ol>
+
+<p>The program also discussed a couple of interesting dates:</p>
+<ul>
+  <li>After <span data-var='years_to_interest_more_than_payments'></span> the interest on the pension pot will be greater than the payments made into it.</li>
+  <li>After <span data-var='years_to_charges_more_than_payments'></span> the charges on the pension pot will be greater than the payments made into it.</li>
+</ul>
+
+<p>This assumes that interest and charges on the pension are calculated monthly, and that contributions grow annually.</p>
+
+</body>
+</html>
